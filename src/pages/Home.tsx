@@ -59,7 +59,7 @@ export default function Home(){
   }
 
   return (
-    <div className='col' style={{ gap:16, minHeight:'100vh', justifyContent:'space-between' }}>
+    <div className='col home-layout'>
       {busy && <ImportProgress phase={phase} progress={progress} onCancel={()=>{ if (phase!=='insert'){ setCancelled(true); setBusy(false); setPhase('idle') } }} />}
       {/* Top: Settings */}
       <div className='card col'>
@@ -84,9 +84,11 @@ export default function Home(){
 
       {/* Middle: Start button centered as big circle */}
       <div className='center' style={{ marginTop:8, marginBottom:8 }}>
-        <button className='btn btn-primary btn-circle' onClick={()=> nav('/review')} aria-label='今日の復習を開始'>
-          今日の復習を開始
-        </button>
+        <div className='hygge-stack'>
+          <button className='btn btn-circle btn-hygge' onClick={()=> nav('/review')} aria-label='今日の復習を開始'>
+            今日の復習を開始
+          </button>
+        </div>
       </div>
 
       {/* Bottom: Words/Import and description */}
