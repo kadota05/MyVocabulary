@@ -1,11 +1,19 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '~\/state/store'
 
 export default function Review(){
   const nav = useNavigate()
   const { current, remaining, again, flipped, startToday, flip, grade, loading } = useStore()
-  useEffect(()=>{ startToday() },[startToday])
+  const [initialized, setInitialized] = useState(false)
+  useEffect(()=>{
+    let cancelled = false
+    setInitialized(prev=> prev ? false : prev)
+    startToday().finally(()=>{
+      if (!cancelled) setInitialized(true)
+    })
+    return ()=>{ cancelled = true }
+  },[startToday])
   const content = useMemo(()=>{
     if (!current) return null
     return (
@@ -25,6 +33,7 @@ export default function Review(){
 
   const alertedRef = useRef(false)
   useEffect(()=>{
+    if (!initialized) return
     if (!loading && !current && remaining.length===0 && again.length===0){
       if (alertedRef.current) return
       alertedRef.current = true
@@ -33,7 +42,7 @@ export default function Review(){
         nav('/')
       }, 50)
     }
-  },[loading, current, remaining.length, again.length, nav])
+  },[initialized, loading, current, remaining.length, again.length, nav])
 
   return (
     <div className='col' style={{ gap:16 }}>

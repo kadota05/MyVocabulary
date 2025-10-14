@@ -83,7 +83,7 @@ export default function Home(){
       </div>
 
       {/* Middle: Start button centered as big circle */}
-      <div className='center' style={{ marginTop:8, marginBottom:8 }}>
+      <div className='center' style={{ marginTop:0, marginBottom:0 }}>
         <div className='hygge-stack'>
           <button className='btn btn-circle btn-hygge' onClick={()=> nav('/review')} aria-label='今日の復習を開始'>
             今日の復習を開始
@@ -92,7 +92,7 @@ export default function Home(){
       </div>
 
       {/* Bottom: Words/Import and description */}
-      <div className='col' style={{ gap:12 }}>
+      <div className='col' style={{ gap:8 }}>
         <div className='row'>
           <button className='btn grow' onClick={()=> nav('/words')}>単語一覧</button>
           <button className='btn grow' onClick={onImport} disabled={busy}>{busy? '読み込み中...' : 'インポート'}</button>
