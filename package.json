@@ -1,0 +1,27 @@
+{
+  "name": "my-vocabulary",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "postinstall": "node -e \"const fs=require('fs');const p='node_modules/sql.js/dist/sql-wasm.wasm';try{if(fs.existsSync(p)){fs.copyFileSync(p,'public/sql-wasm.wasm');console.log('Copied sql-wasm.wasm');}}catch(e){console.warn('sql-wasm.wasm copy failed', e.message)}\""
+  },
+  "dependencies": {
+    "idb-keyval": "^6.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "sql.js": "^1.10.2",
+    "zustand": "^4.5.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.2"
+  }
+}
