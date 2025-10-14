@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "node ./node_modules/vite/bin/vite.js build",
+    "vercel-build": "node ./node_modules/vite/bin/vite.js build",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "prebuild": "chmod +x node_modules/.bin/vite || true",
     "postinstall": "node -e \"const fs=require('fs');const p='node_modules/sql.js/dist/sql-wasm.wasm';try{if(fs.existsSync(p)){fs.copyFileSync(p,'public/sql-wasm.wasm');console.log('Copied sql-wasm.wasm');}}catch(e){console.warn('sql-wasm.wasm copy failed', e.message)}\""
   },
   "engines": { "node": ">=18" },
