@@ -92,8 +92,8 @@ export default function Home(){
 
   async function onImport(){
     try{
-      if (!clientId) { alert('Google OAuth Client ID を設定してください'); return }
-      if (!docId) { alert('Google Document ID を入力してください'); return }
+      if (!clientId) { alert('Please enter your Google OAuth Client ID.'); return }
+      if (!docId) { alert('Please enter your Google Document ID.'); return }
       setCancelled(false)
       setBusy(true)
       setPhase('auth')
@@ -107,19 +107,19 @@ export default function Home(){
       setProgress({ done:0, total })
       setPhase('insert')
       const stats = await importRows(rows, (done,total)=> setProgress({ done, total }))
-      toast(`追加 ${stats.added} / スキップ ${stats.skipped} / 失敗 ${stats.failed}`)
+      toast(`Imported ${stats.added} • Skipped ${stats.skipped} • Failed ${stats.failed}`)
       await refreshStats()
     } catch(e:any){
       const msg = String(e?.message || e)
-      if (msg === 'NO_TABLE') alert('ドキュメント内に有効な表が見つかりません')
-      else if (msg.includes('redirect_uri_mismatch')) alert('OAuth 設定の Redirect/Origins を確認してください (redirect_uri_mismatch)')
+      if (msg === 'NO_TABLE') alert('No usable table was found in the document.')
+      else if (msg.includes('redirect_uri_mismatch')) alert('Check OAuth Redirect/Origins configuration (redirect_uri_mismatch).')
       else if (msg === 'AUTH_CANCELLED' || msg === 'USER_CANCELLED'){
-        // ユーザー操作でキャンセルされた場合は静かに終了
+        // If the user cancels manually, exit quietly without notifying
       }
-      else if (msg === 'AUTH_TIMEOUT') alert('認証がタイムアウトしました。しばらくしてから再試行してください。')
+      else if (msg === 'AUTH_TIMEOUT') alert('Authentication timed out. Please try again.')
       else {
         const detail = formatGapiError(e)
-        alert(`エラーが発生しました: ${detail}`)
+        alert(`Import failed: ${detail}`)
         console.error('Import failed', e)
       }
     } finally{
@@ -133,7 +133,7 @@ export default function Home(){
     if (newWordBusy) return
     const phrase = newWord.phrase.trim()
     if (!phrase){
-      alert('単語（Phrase）を入力してください')
+      alert('Please enter a phrase.')
       return
     }
     setNewWordBusy(true)
@@ -144,16 +144,16 @@ export default function Home(){
         example: newWord.example,
         source: newWord.source
       })
-      toast('単語を追加しました')
+      toast('Added a new card.')
       await refreshStats()
       setNewWordOpen(false)
       resetNewWord()
     } catch(e:any){
       const msg = String(e?.message || e)
-      if (msg === 'VALIDATION_EMPTY_PHRASE') alert('単語（Phrase）は必須です')
-      else if (msg === 'DUPLICATE_PHRASE') alert('同じ単語が既に登録されています')
+      if (msg === 'VALIDATION_EMPTY_PHRASE') alert('Phrase is required.')
+      else if (msg === 'DUPLICATE_PHRASE') alert('That phrase is already registered.')
       else {
-        alert('追加に失敗しました')
+        alert('Failed to add card.')
         console.error('Add word failed', e)
       }
     } finally{
@@ -186,7 +186,7 @@ export default function Home(){
             onClick={()=> setOpenSettings(o=>!o)}
             aria-expanded={openSettings}
             aria-controls='settings-panel'
-            aria-label='設定を開く'
+            aria-label='Open settings'
           >
             <GearIcon />
           </button>
@@ -194,7 +194,7 @@ export default function Home(){
             type='button'
             className='icon-button'
             onClick={()=> nav('/words')}
-            aria-label='単語一覧へ移動'
+            aria-label='Go to word library'
           >
             <ListIcon />
           </button>
@@ -221,11 +221,13 @@ export default function Home(){
               onClick={()=> nav('/review')}
               aria-label="Start today's review"
             >
-              <span className='hero-label'>Start Review</span>
+              <span className='hero-label'>Start.</span>
             </button>
           </div>
         </section>
       </main>
+
+      {fabOpen && <div className='fab-overlay' onClick={()=> setFabOpen(false)} />}
 
       <div className={`fab-container ${fabOpen ? 'open' : ''}`}>
         <div className='fab-menu'>
@@ -235,20 +237,20 @@ export default function Home(){
             onClick={()=>{ setFabOpen(false); onImport() }}
             disabled={busy}
           >
-            インポート
+            Import
           </button>
           <button
             type='button'
             className='fab-item'
             onClick={()=>{ setFabOpen(false); setNewWordOpen(true) }}
           >
-            新規カードを追加
+            Add Card
           </button>
         </div>
         <button
           type='button'
           className='fab-toggle'
-          aria-label='操作メニュー'
+          aria-label='Actions menu'
           aria-expanded={fabOpen}
           onClick={()=> setFabOpen(o=>!o)}
         >
@@ -257,7 +259,7 @@ export default function Home(){
       </div>
 
       {openSettings && (
-        <Modal title='Google 連携' onClose={()=> setOpenSettings(false)}>
+        <Modal title='Import Setting' onClose={()=> setOpenSettings(false)}>
           <div className='col' style={{ gap:12 }} id='settings-panel'>
             <label className='label'>Google OAuth Client ID</label>
             <input
@@ -271,23 +273,23 @@ export default function Home(){
               className='input'
               value={docId}
               onChange={e=>setDocId(e.target.value)}
-              placeholder='1Abc...（Docs の URL の ID）'
+              placeholder='1Abc... (ID from Docs URL)'
             />
             <div className='modal-actions'>
-              <button type='button' className='btn' onClick={()=> setOpenSettings(false)}>閉じる</button>
+              <button type='button' className='btn' onClick={()=> setOpenSettings(false)}>Close</button>
             </div>
           </div>
         </Modal>
       )}
 
       {newWordOpen && (
-        <Modal title='新しい単語を追加' onClose={closeNewWord}>
+        <Modal title='Add New Card' onClose={closeNewWord}>
           <form
             className='col'
             style={{ gap:12 }}
             onSubmit={e=>{ e.preventDefault(); onCreateWord() }}
           >
-            <label className='label'>単語（必須）</label>
+            <label className='label'>Phrase (required)</label>
             <input
               ref={phraseInputRef}
               className='input'
@@ -296,7 +298,7 @@ export default function Home(){
               placeholder='phrase'
               disabled={newWordBusy}
             />
-            <label className='label'>意味</label>
+            <label className='label'>Meaning</label>
             <input
               className='input'
               value={newWord.meaning}
@@ -304,7 +306,7 @@ export default function Home(){
               placeholder='meaning'
               disabled={newWordBusy}
             />
-            <label className='label'>例文</label>
+            <label className='label'>Example</label>
             <input
               className='input'
               value={newWord.example}
@@ -312,7 +314,7 @@ export default function Home(){
               placeholder='example'
               disabled={newWordBusy}
             />
-            <label className='label'>ソース</label>
+            <label className='label'>Source</label>
             <input
               className='input'
               value={newWord.source}
@@ -322,19 +324,19 @@ export default function Home(){
             />
             <div className='modal-actions'>
               <button
+                type='submit'
+                className='btn btn-primary'
+                disabled={newWordBusy}
+              >
+                {newWordBusy ? 'Adding...' : 'Add Card'}
+              </button>
+              <button
                 type='button'
                 className='btn'
                 onClick={closeNewWord}
                 disabled={newWordBusy}
               >
-                キャンセル
-              </button>
-              <button
-                type='submit'
-                className='btn btn-primary'
-                disabled={newWordBusy}
-              >
-                {newWordBusy ? '追加中...' : '追加する'}
+                Cancel
               </button>
             </div>
           </form>
@@ -356,20 +358,20 @@ function ImportProgress({ phase, progress, onCancel }: { phase: Phase; progress:
     return 0
   },[phase, progress])
   const label =
-    phase==='auth' ? '認証中' :
-    phase==='fetch' ? 'ドキュメントを取得中' :
-    phase==='parse' ? '解析中' :
-    phase==='insert' ? `登録中 ${progress.done}/${progress.total}` : ''
+    phase==='auth' ? 'Authorizing' :
+    phase==='fetch' ? 'Fetching document' :
+    phase==='parse' ? 'Parsing rows' :
+    phase==='insert' ? `Importing ${progress.done}/${progress.total}` : ''
   return (
     <div className='import-progress'>
       <div className='card' style={{ width:'90%', maxWidth:480 }}>
-        <div className='title'>インポート</div>
+        <div className='title'>Import</div>
         <div className='muted' style={{ marginBottom:8 }}>{label}</div>
         <div style={{ height:12, background:'#0b1220', border:'1px solid #334155', borderRadius:8, overflow:'hidden' }}>
           <div style={{ height:'100%', width:`${percent}%`, background:'#22c55e', transition:'width .2s ease' }} />
         </div>
         <div className='row' style={{ marginTop:12, justifyContent:'flex-end' }}>
-          <button className='btn' onClick={onCancel} disabled={phase==='insert'}>{phase==='insert' ? 'キャンセル不可' : 'キャンセル'}</button>
+          <button className='btn' onClick={onCancel} disabled={phase==='insert'}>{phase==='insert' ? 'Cannot cancel' : 'Cancel'}</button>
         </div>
       </div>
     </div>
@@ -404,7 +406,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: ()=>void;
       <div className='modal-card' onClick={e=> e.stopPropagation()}>
         <div className='modal-header'>
           <div className='modal-title'>{title}</div>
-          <button type='button' className='modal-close' onClick={onClose} aria-label='閉じる'>
+          <button type='button' className='modal-close' onClick={onClose} aria-label='Close'>
             <span aria-hidden='true'>×</span>
           </button>
         </div>
