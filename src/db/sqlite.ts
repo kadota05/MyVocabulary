@@ -172,6 +172,91 @@ export async function getDueCards(asOfYMD: string): Promise<DueCard[]> {
 
 export type WordWithSrs = WordRow & SrsRow
 
+export async function addWord(
+  entry: { phrase: string; meaning?: string; example?: string; source?: string }
+): Promise<WordWithSrs> {
+  const d = await getDB()
+  const phrase = (entry.phrase || '').trim()
+  if (!phrase) throw new Error('VALIDATION_EMPTY_PHRASE')
+  const meaning = (entry.meaning || '').trim()
+  const example = (entry.example || '').trim()
+  const source = (entry.source || '').trim()
+  const norm = (s:string)=> s.trim().toLowerCase()
+  const existing = d.exec('SELECT phrase FROM words')
+  if (existing[0]){
+    const set = new Set<string>()
+    for (const row of existing[0].values) set.add(norm(String(row[0])))
+    if (set.has(norm(phrase))) throw new Error('DUPLICATE_PHRASE')
+  }
+  const id = uuid()
+  const nowIso = new Date().toISOString()
+  const nextDue = todayYMD()
+  d.exec('BEGIN;')
+  d.run(
+    'INSERT INTO words (id, phrase, meaning, example, source, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [id, phrase, meaning, example || null, source || null, nowIso, nowIso]
+  )
+  d.run(
+    'INSERT INTO srs_state (wordId, nextDueDate, intervalDays, stability, reps, lapses, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [id, nextDue, 1, 2.0, 0, 0, nowIso]
+  )
+  d.exec('COMMIT;')
+  await persist()
+  return {
+    id,
+    phrase,
+    meaning,
+    example: example || undefined,
+    source: source || undefined,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    wordId: id,
+    nextDueDate: nextDue,
+    intervalDays: 1,
+    stability: 2.0,
+    reps: 0,
+    lapses: 0
+  }
+}
+
+export type WordSummary = {
+  total: number
+  learning: number
+  learned: number
+  firstCreatedAt: string | null
+}
+
+export async function getWordSummary(): Promise<WordSummary> {
+  const d = await getDB()
+  const stmt = d.prepare(`
+    SELECT w.createdAt as createdAt, s.nextDueDate as nextDueDate
+    FROM words w
+    LEFT JOIN srs_state s ON s.wordId = w.id
+  `)
+  let total = 0
+  let learned = 0
+  let firstCreatedAt: string | null = null
+  const today = new Date()
+  today.setHours(0,0,0,0)
+  const horizon = new Date(today)
+  horizon.setDate(horizon.getDate() + 365)
+  while (stmt.step()){
+    const row = stmt.getAsObject() as any
+    total += 1
+    const created = row.createdAt != null ? String(row.createdAt) : null
+    if (created && (!firstCreatedAt || created < firstCreatedAt)){
+      firstCreatedAt = created
+    }
+    const nextDue = row.nextDueDate != null ? String(row.nextDueDate) : null
+    if (nextDue && isBeyondHorizon(nextDue, horizon)){
+      learned += 1
+    }
+  }
+  stmt.free()
+  const learning = Math.max(0, total - learned)
+  return { total, learning, learned, firstCreatedAt }
+}
+
 export async function getAllWords(): Promise<WordWithSrs[]> {
   const d = await getDB()
   const q = `
@@ -270,4 +355,21 @@ function addDays(ymd:string, days:number){
   const dt = new Date(Date.UTC(y, m-1, d))
   dt.setUTCDate(dt.getUTCDate()+days)
   return todayYMD(new Date(dt))
+}
+
+function isBeyondHorizon(nextDue: string, horizon: Date){
+  const dt = parseYMD(nextDue)
+  if (!dt) return false
+  return dt.getTime() >= horizon.getTime()
+}
+
+function parseYMD(ymd: string){
+  if (!ymd) return null
+  const parts = ymd.split('-').map(Number)
+  if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return null
+  const [y,m,d] = parts
+  const dt = new Date(y, m-1, d)
+  if (Number.isNaN(dt.getTime())) return null
+  dt.setHours(0,0,0,0)
+  return dt
 }
