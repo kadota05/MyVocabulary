@@ -9,6 +9,7 @@ let SQL: SqlJsStatic | null = null
 let db: Database | null = null
 
 const DB_KEY = 'mvocab.sqlite'
+const DB_BACKUP_KEY = 'mvocab.sqlite.backup'
 const WASM_PATH = '/sql-wasm.wasm'
 
 export async function getDB(): Promise<Database> {
@@ -22,8 +23,21 @@ export async function getDB(): Promise<Database> {
     }
   }
   const saved = await idbGet(DB_KEY)
-  if (saved) {
-    db = new SQL.Database(new Uint8Array(saved as ArrayBuffer))
+  let savedBytes: Uint8Array | null = null
+  if (saved instanceof Uint8Array) savedBytes = saved
+  else if (saved instanceof ArrayBuffer) savedBytes = new Uint8Array(saved)
+  else if (saved && ArrayBuffer.isView(saved)) savedBytes = new Uint8Array(saved.buffer)
+
+  if (!savedBytes){
+    const backup = readBackup()
+    if (backup){
+      savedBytes = backup
+      await idbSet(DB_KEY, savedBytes)
+    }
+  }
+
+  if (savedBytes) {
+    db = new SQL.Database(savedBytes)
   } else {
     db = new SQL.Database()
     const schema = (await fetch('/db/schema.sql').then(r=>r.text()))
@@ -39,6 +53,7 @@ export async function persist(){
   if (!db) return
   const data = db.export()
   await idbSet(DB_KEY, data)
+  writeBackup(data)
 }
 
 export function todayYMD(d = new Date()): string {
@@ -372,4 +387,46 @@ function parseYMD(ymd: string){
   if (Number.isNaN(dt.getTime())) return null
   dt.setHours(0,0,0,0)
   return dt
+}
+
+function writeBackup(bytes: Uint8Array){
+  if (typeof window === 'undefined' || !window.localStorage) return
+  try{
+    const base64 = bufferToBase64(bytes)
+    window.localStorage.setItem(DB_BACKUP_KEY, base64)
+  } catch (error){
+    console.warn('Failed to store backup', error)
+  }
+}
+
+function readBackup(): Uint8Array | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null
+  try{
+    const base64 = window.localStorage.getItem(DB_BACKUP_KEY)
+    if (!base64) return null
+    return base64ToBuffer(base64)
+  } catch (error){
+    console.warn('Failed to read backup', error)
+    return null
+  }
+}
+
+function bufferToBase64(bytes: Uint8Array){
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk){
+    const sub = bytes.subarray(i, i + chunk)
+    binary += String.fromCharCode(...sub)
+  }
+  return btoa(binary)
+}
+
+function base64ToBuffer(base64: string){
+  const binary = atob(base64)
+  const len = binary.length
+  const bytes = new Uint8Array(len)
+  for (let i = 0; i < len; i++){
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
 }
