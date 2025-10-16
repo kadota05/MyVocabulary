@@ -42,12 +42,32 @@ export default function Home(){
 
   useEffect(()=>{
     if (!fabOpen) return
-    const handlePointerDown = (event: MouseEvent) => {
+    let blockNextClick = false
+
+    const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null
-      if (!target?.closest('.fab-container')) setFabOpen(false)
+      if (target?.closest('.fab-container')) return
+      blockNextClick = true
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+      setFabOpen(false)
     }
-    window.addEventListener('pointerdown', handlePointerDown)
-    return () => window.removeEventListener('pointerdown', handlePointerDown)
+
+    const handleClick = (event: MouseEvent) => {
+      if (!blockNextClick) return
+      blockNextClick = false
+      event.preventDefault()
+      event.stopPropagation()
+      event.stopImmediatePropagation()
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown, true)
+    window.addEventListener('click', handleClick, true)
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, true)
+      window.removeEventListener('click', handleClick, true)
+    }
   },[fabOpen])
 
   useEffect(()=>{
