@@ -24,7 +24,23 @@ export default function Review(){
           <div className='review-face back'>
             <div className='review-meaning'>{current.meaning || '-'}</div>
             {current.example && <div className='review-extra'>{current.example}</div>}
-            {current.source && <div className='review-extra'>Source: {current.source}</div>}
+            {current.source && (
+              <div className='review-extra'>
+                Source:{' '}
+                {isHttpUrl(current.source) ? (
+                  <a
+                    href={current.source}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    onClick={e=> e.stopPropagation()}
+                  >
+                    {current.source}
+                  </a>
+                ) : (
+                  current.source
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -88,4 +104,13 @@ function PauseCircleIcon(){
       <line x1='14' y1='9' x2='14' y2='15' />
     </svg>
   )
+}
+
+function isHttpUrl(value: string){
+  try{
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
 }

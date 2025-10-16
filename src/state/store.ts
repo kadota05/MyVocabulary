@@ -53,23 +53,19 @@ export const useStore = create<State>((set, get)=> ({
 function pickNext(left: DueCard[], right: DueCard[]): { next?: DueCard; side?: 'left'|'right'; leftOut: DueCard[]; rightOut: DueCard[] }{
   const lc = left.length
   const rc = right.length
-  if (lc === 0 && rc === 0) return { next: undefined, side: undefined, leftOut: left, rightOut: right }
-  if (lc === 0 && rc > 0){
-    const n = right[0]
-    return { next: n, side: 'right', leftOut: left, rightOut: right.slice(1) }
-  }
-  if (rc === 0 && lc > 0){
-    const n = left[0]
-    return { next: n, side: 'left', leftOut: left.slice(1), rightOut: right }
-  }
-  // both non-empty: pick side randomly, weighted by counts
   const total = lc + rc
-  const r = Math.random() * total
-  if (r < lc){
-    const n = left[0]
-    return { next: n, side: 'left', leftOut: left.slice(1), rightOut: right }
-  } else {
-    const n = right[0]
-    return { next: n, side: 'right', leftOut: left, rightOut: right.slice(1) }
+  if (total === 0) return { next: undefined, side: undefined, leftOut: left, rightOut: right }
+
+  const pickIndex = Math.floor(Math.random() * total)
+  if (pickIndex < lc){
+    const idx = pickIndex
+    const next = left[idx]
+    const leftOut = [...left.slice(0, idx), ...left.slice(idx + 1)]
+    return { next, side: 'left', leftOut, rightOut: right }
   }
+
+  const idx = pickIndex - lc
+  const next = right[idx]
+  const rightOut = [...right.slice(0, idx), ...right.slice(idx + 1)]
+  return { next, side: 'right', leftOut: left, rightOut }
 }
