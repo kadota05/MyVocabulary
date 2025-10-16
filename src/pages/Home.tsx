@@ -19,6 +19,7 @@ export default function Home(){
   const [newWordOpen, setNewWordOpen] = useState(false)
   const [newWordBusy, setNewWordBusy] = useState(false)
   const [newWord, setNewWord] = useState({ phrase:'', meaning:'', example:'', source:'' })
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [summary, setSummary] = useState<WordSummary>({ total:0, learning:0, learned:0, firstCreatedAt: null })
   const phraseInputRef = useRef<HTMLInputElement|null>(null)
 
@@ -99,6 +100,7 @@ export default function Home(){
 
   function resetNewWord(){
     setNewWord({ phrase:'', meaning:'', example:'', source:'' })
+    setDuplicateError(null)
   }
 
   function formatGapiError(e:any){
@@ -158,6 +160,7 @@ export default function Home(){
       alert('Please enter a phrase.')
       return
     }
+    setDuplicateError(null)
     setNewWordBusy(true)
     try{
       await addWord({
@@ -173,7 +176,9 @@ export default function Home(){
     } catch(e:any){
       const msg = String(e?.message || e)
       if (msg === 'VALIDATION_EMPTY_PHRASE') alert('Phrase is required.')
-      else if (msg === 'DUPLICATE_PHRASE') alert('That phrase is already registered.')
+      else if (msg === 'DUPLICATE_PHRASE'){
+        setDuplicateError('That phrase is already registered.')
+      }
       else {
         alert('Failed to add card.')
         console.error('Add word failed', e)
@@ -320,6 +325,7 @@ export default function Home(){
               placeholder='phrase'
               disabled={newWordBusy}
             />
+            {duplicateError && <div className='form-error'>{duplicateError}</div>}
             <label className='label'>Meaning</label>
             <input
               className='input'
