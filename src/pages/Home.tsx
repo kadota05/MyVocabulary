@@ -40,14 +40,16 @@ export default function Home(){
     return () => window.removeEventListener('keydown', handleKeyDown)
   },[newWordBusy])
 
-  useEffect(()=>{
-    if (!fabOpen) return
-    let blockNextClick = false
+  const fabOpenRef = useRef(fabOpen)
+  useEffect(()=> { fabOpenRef.current = fabOpen },[fabOpen])
 
+  const suppressClickRef = useRef(false)
+  useEffect(()=>{
     const handlePointerDown = (event: PointerEvent) => {
+      if (!fabOpenRef.current) return
       const target = event.target as HTMLElement | null
       if (target?.closest('.fab-container')) return
-      blockNextClick = true
+      suppressClickRef.current = true
       event.preventDefault()
       event.stopPropagation()
       event.stopImmediatePropagation()
@@ -55,8 +57,8 @@ export default function Home(){
     }
 
     const handleClick = (event: MouseEvent) => {
-      if (!blockNextClick) return
-      blockNextClick = false
+      if (!suppressClickRef.current) return
+      suppressClickRef.current = false
       event.preventDefault()
       event.stopPropagation()
       event.stopImmediatePropagation()
@@ -68,7 +70,7 @@ export default function Home(){
       window.removeEventListener('pointerdown', handlePointerDown, true)
       window.removeEventListener('click', handleClick, true)
     }
-  },[fabOpen])
+  },[])
 
   useEffect(()=>{
     if (newWordOpen){
