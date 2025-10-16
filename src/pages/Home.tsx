@@ -334,12 +334,12 @@ export default function Home(){
               placeholder='meaning'
               disabled={newWordBusy}
             />
-            <label className='label'>Example</label>
+            <label className='label'>Tips</label>
             <input
               className='input'
               value={newWord.example}
               onChange={e=> setNewWord(v=>({ ...v, example: e.target.value }))}
-              placeholder='example'
+              placeholder='tips'
               disabled={newWordBusy}
             />
             <label className='label'>Source</label>

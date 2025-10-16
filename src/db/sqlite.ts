@@ -329,8 +329,12 @@ export async function updateWord(
   }
   const nextPhrase = (patch.phrase ?? current.phrase).trim()
   const nextMeaning = (patch.meaning ?? current.meaning).trim()
-  const nextExample = (patch.example ?? current.example ?? '').toString().trim()
-  const nextSource = (patch.source ?? current.source ?? '').toString().trim()
+  const nextExample = patch.example === undefined
+    ? (current.example ?? '').toString().trim()
+    : (patch.example ?? '').toString().trim()
+  const nextSource = patch.source === undefined
+    ? (current.source ?? '').toString().trim()
+    : (patch.source ?? '').toString().trim()
   if (!nextPhrase) throw new Error('VALIDATION_EMPTY_PHRASE')
   // Case-insensitive + trimmed duplicate check excluding self
   const norm = (s:string)=> s.trim().toLowerCase()

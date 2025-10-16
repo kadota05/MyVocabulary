@@ -116,7 +116,12 @@
 .word-card__action--danger{color:var(--danger);}
 .word-card__action[disabled]{opacity:0.5; cursor:not-allowed;}
 .word-card__next{font-size:12px;}
-.word-card__stats{font-size:12px; margin-top:4px;}
+.word-card__stats{font-size:12px; margin-top:0;}
+.word-card__source{font-size:13px;}
+.word-card__source-link{color:var(--muted); text-decoration:none; border-bottom:1px dotted rgba(148,163,184,.5); transition:color .18s ease, border-color .18s ease;}
+.word-card__source-link:hover{color:var(--fg); border-bottom-color:rgba(226,232,240,.6);}
+.word-card__source-link:focus-visible{outline:2px solid var(--primary); outline-offset:2px;}
+.word-card__footer{display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:12px;}
 .stack{display:flex; gap:8px;}
 .tap{ user-select:none;}
 
