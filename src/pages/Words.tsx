@@ -58,16 +58,15 @@ export default function Words(){
   return (
     <div className='home-screen words-screen'>
       <header className='home-header words-header-bar'>
-        <div className='home-header__brand'>Word Library</div>
-        <div className='home-header__actions'>
-          <button className='icon-button' onClick={()=> nav('/')} aria-label='Back to home'>
-            <HomeIcon />
-          </button>
+        <div className='words-header__row'>
+          <div className='home-header__brand'>Word Library</div>
+          <div className='home-header__actions'>
+            <button className='icon-button' onClick={()=> nav('/')} aria-label='Back to home'>
+              <BackIcon />
+            </button>
+          </div>
         </div>
-      </header>
-
-      <main className='words-main'>
-        <div className='words-toolbar'>
+        <div className='words-header__search'>
           <input
             className='input'
             placeholder='Search (phrase / meaning / example / source)'
@@ -75,9 +74,12 @@ export default function Words(){
             onChange={e=> setQ(e.target.value)}
           />
           <div className='words-header__metrics'>
-            Total {items.length} | Showing {filtered.length}
+            Total {items.length} • Showing {filtered.length}
           </div>
         </div>
+      </header>
+
+      <main className='words-main'>
         {loading ? (
           <div className='card center' style={{ minHeight:120 }}>Loading...</div>
         ) : filtered.length === 0 ? (
@@ -108,7 +110,7 @@ export default function Words(){
                       <div style={{ fontWeight:700 }}>{w.phrase}</div>
                       <div className='muted' style={{ fontSize:12 }}>Next review: {w.nextDueDate || '-'}</div>
                     </div>
-                    <div style={{ marginTop:4 }}>{w.meaning}</div>
+                    <div style={{ marginTop:4 }}>{w.meaning || '-'}</div>
                     {w.example && <div className='muted' style={{ marginTop:4 }}>{w.example}</div>}
                     {w.source && <div className='muted' style={{ marginTop:4 }}>Source: {w.source}</div>}
                     <div className='row' style={{ marginTop:8, justifyContent:'space-between', alignItems:'center' }}>
@@ -127,10 +129,11 @@ export default function Words(){
   )
 }
 
-function HomeIcon(){
+function BackIcon(){
   return (
     <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
-      <path d='M3 11.5 12 4l9 7.5v8a.5.5 0 0 1-.5.5H15a.5.5 0 0 1-.5-.5v-5h-5v5a.5.5 0 0 1-.5.5H3.5a.5.5 0 0 1-.5-.5v-8z' />
+      <polyline points='15 18 9 12 15 6' />
+      <line x1='9' y1='12' x2='21' y2='12' />
     </svg>
   )
 }

@@ -70,7 +70,7 @@ export default function Home(){
 
   const dayCount = useMemo(()=> calculateDayCount(summary.firstCreatedAt), [summary.firstCreatedAt])
   const dayCountFormatted = dayCount > 0 ? dayCount.toLocaleString('en-US') : ''
-  const dayLine = dayCount > 0 ? `Day ${dayCountFormatted} since first sync` : 'Waiting for your first sync'
+  const dayLine = dayCount > 0 ? `Day ${dayCountFormatted}` : 'Waiting for your first sync'
   const learningCountFormatted = useMemo(()=> summary.learning.toLocaleString('en-US'),[summary.learning])
   const learnedCountFormatted = useMemo(()=> summary.learned.toLocaleString('en-US'),[summary.learned])
   const todayLabel = formatDisplayDate(new Date())
@@ -196,7 +196,7 @@ export default function Home(){
             onClick={()=> nav('/words')}
             aria-label='Go to word library'
           >
-            <ListIcon />
+            <DictionaryIcon />
           </button>
         </div>
       </header>
@@ -387,15 +387,12 @@ function GearIcon(){
   )
 }
 
-function ListIcon(){
+function DictionaryIcon(){
   return (
     <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
-      <line x1='9' y1='6' x2='21' y2='6' />
-      <line x1='9' y1='12' x2='21' y2='12' />
-      <line x1='9' y1='18' x2='21' y2='18' />
-      <circle cx='4' cy='6' r='1.5' />
-      <circle cx='4' cy='12' r='1.5' />
-      <circle cx='4' cy='18' r='1.5' />
+      <path d='M12 6.3v13.4' />
+      <path d='M12 6.3C10.8 5.5 9.4 5 8 5H5.5A2.5 2.5 0 0 0 3 7.5V19a.5.5 0 0 0 .5.5H8c1.6 0 3 .5 4 1.3' />
+      <path d='M12 6.3C13.2 5.5 14.6 5 16 5h2.5A2.5 2.5 0 0 1 21 7.5V19a.5.5 0 0 1-.5.5H16c-1.6 0-3 .5-4 1.3' />
     </svg>
   )
 }

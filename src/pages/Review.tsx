@@ -22,7 +22,7 @@ export default function Review(){
           <div className='review-face main'>{current.phrase}</div>
         ) : (
           <div className='review-face back'>
-            <div className='review-meaning'>{current.meaning || 'Not provided'}</div>
+            <div className='review-meaning'>{current.meaning || '-'}</div>
             {current.example && <div className='review-extra'>{current.example}</div>}
             {current.source && <div className='review-extra'>Source: {current.source}</div>}
           </div>
@@ -49,11 +49,8 @@ export default function Review(){
       <header className='home-header review-header'>
         <div className='home-header__brand'>Review Session</div>
         <div className='home-header__actions'>
-          <button className='icon-button' onClick={()=> nav('/words')} aria-label='Open word library'>
-            <ListIcon />
-          </button>
-          <button className='icon-button' onClick={()=> nav('/')} aria-label='Back to home'>
-            <HomeIcon />
+          <button className='icon-button' onClick={()=> nav('/')} aria-label='End review session'>
+            <PauseCircleIcon />
           </button>
         </div>
       </header>
@@ -66,43 +63,29 @@ export default function Review(){
             cardContent
           )}
         </section>
-
-        <section className='review-panel'>
-          <div className='review-stats'>
-            <span>Remaining: {remaining.length}</span>
-            <span>Retry later: {again.length}</span>
-          </div>
-          <div className='review-grade-grid'>
-            <button className='btn btn-accent review-grade' onClick={()=> grade('EASY')}>Easy</button>
-            <button className='btn btn-primary review-grade' onClick={()=> grade('NORMAL')}>Normal</button>
-            <button className='btn btn-danger review-grade' onClick={()=> grade('HARD')}>Hard</button>
-          </div>
-          <div className='review-controls'>
-            <button className='pill review-pause' onClick={()=> nav('/')}>Pause Session</button>
-          </div>
-        </section>
       </main>
+
+      <footer className='review-footer'>
+        <div className='review-footer__stats'>
+          <span>Remaining: {remaining.length}</span>
+          <span>Retry later: {again.length}</span>
+        </div>
+        <div className='review-grade-grid'>
+          <button className='btn btn-accent review-grade' onClick={()=> grade('EASY')}>Easy</button>
+          <button className='btn btn-primary review-grade' onClick={()=> grade('NORMAL')}>Normal</button>
+          <button className='btn btn-danger review-grade' onClick={()=> grade('HARD')}>Hard</button>
+        </div>
+      </footer>
     </div>
   )
 }
 
-function ListIcon(){
+function PauseCircleIcon(){
   return (
     <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
-      <line x1='9' y1='6' x2='21' y2='6' />
-      <line x1='9' y1='12' x2='21' y2='12' />
-      <line x1='9' y1='18' x2='21' y2='18' />
-      <circle cx='4' cy='6' r='1.5' />
-      <circle cx='4' cy='12' r='1.5' />
-      <circle cx='4' cy='18' r='1.5' />
-    </svg>
-  )
-}
-
-function HomeIcon(){
-  return (
-    <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
-      <path d='M3 11.5 12 4l9 7.5v8a.5.5 0 0 1-.5.5H15a.5.5 0 0 1-.5-.5v-5h-5v5a.5.5 0 0 1-.5.5H3.5a.5.5 0 0 1-.5-.5v-8z' />
+      <circle cx='12' cy='12' r='9' />
+      <line x1='10' y1='9' x2='10' y2='15' />
+      <line x1='14' y1='9' x2='14' y2='15' />
     </svg>
   )
 }
