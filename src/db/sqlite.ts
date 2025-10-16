@@ -296,6 +296,23 @@ export async function getAllWords(): Promise<WordWithSrs[]> {
   return out
 }
 
+export async function deleteWord(wordId: string): Promise<void> {
+  const d = await getDB()
+  const exists = d.exec('SELECT id FROM words WHERE id = ?', [wordId])
+  if (!exists[0] || exists[0].values.length === 0) return
+  d.exec('BEGIN;')
+  try{
+    d.run('DELETE FROM review_log WHERE wordId = ?', [wordId])
+    d.run('DELETE FROM srs_state WHERE wordId = ?', [wordId])
+    d.run('DELETE FROM words WHERE id = ?', [wordId])
+    d.exec('COMMIT;')
+  } catch (error){
+    try{ d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+    throw error
+  }
+  await persist()
+}
+
 export async function updateWord(
   wordId: string,
   patch: { phrase?: string; meaning?: string; example?: string | null; source?: string | null }

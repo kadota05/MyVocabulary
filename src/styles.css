@@ -106,6 +106,17 @@
 .footer{ position:fixed; left:0; right:0; bottom:0; background:rgba(8,12,20,.8); backdrop-filter: blur(4px); border-top:1px solid #1f2937; padding:8px 12px;}
 .space{height:72px}
 .pill{border:1px solid #334155; padding:8px 12px; border-radius:9999px; font-weight:600;}
+.word-card__body{display:flex; flex-direction:column; gap:6px;}
+.word-card__header{justify-content:space-between; align-items:flex-start; gap:12px;}
+.word-card__phrase{font-weight:700; font-size:16px; color:var(--fg);}
+.word-card__actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+.word-card__action{appearance:none; background:none; border:none; color:var(--muted); padding:0; font-size:14px; font-weight:500; cursor:pointer; transition:color .18s ease, opacity .18s ease;}
+.word-card__action:hover{color:var(--fg);}
+.word-card__action:focus-visible{outline:2px solid var(--primary); outline-offset:2px;}
+.word-card__action--danger{color:var(--danger);}
+.word-card__action[disabled]{opacity:0.5; cursor:not-allowed;}
+.word-card__next{font-size:12px;}
+.word-card__stats{font-size:12px; margin-top:4px;}
 .stack{display:flex; gap:8px;}
 .tap{ user-select:none;}
 

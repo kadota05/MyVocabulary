@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAllWords, updateWord, type WordWithSrs } from '~/db/sqlite'
+import { deleteWord, getAllWords, updateWord, type WordWithSrs } from '~/db/sqlite'
 
 export default function Words(){
   const nav = useNavigate()
@@ -9,6 +9,7 @@ export default function Words(){
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState<string | undefined>()
   const [edit, setEdit] = useState<{ phrase: string; meaning: string; example: string; source: string }>({ phrase:'', meaning:'', example:'', source:'' })
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(()=> {
     (async()=>{
@@ -52,6 +53,22 @@ export default function Words(){
       else if (msg === 'VALIDATION_EMPTY_PHRASE') alert('Phrase is required.')
       else alert('Failed to update entry.')
       console.error(e)
+    }
+  }
+
+  async function requestDelete(w: WordWithSrs){
+    const confirmed = window.confirm(`Delete "${w.phrase}"?\nThis action cannot be undone.`)
+    if (!confirmed) return
+    setDeletingId(w.id)
+    try{
+      await deleteWord(w.id)
+      setItems(list => list.filter(i => i.id !== w.id))
+      setEditId(id => (id === w.id ? undefined : id))
+    } catch (error){
+      alert('Failed to delete entry.')
+      console.error(error)
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -105,19 +122,26 @@ export default function Words(){
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className='row' style={{ justifyContent:'space-between', alignItems:'baseline' }}>
-                      <div style={{ fontWeight:700 }}>{w.phrase}</div>
-                      <div className='muted' style={{ fontSize:12 }}>Next review: {w.nextDueDate || '-'}</div>
+                  <div className='word-card__body'>
+                    <div className='row word-card__header'>
+                      <div className='word-card__phrase'>{w.phrase}</div>
+                      <div className='word-card__actions'>
+                        <button className='word-card__action' onClick={()=> startEdit(w)}>Edit</button>
+                        <button
+                          className='word-card__action word-card__action--danger'
+                          onClick={()=> requestDelete(w)}
+                          disabled={deletingId === w.id}
+                        >
+                          {deletingId === w.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
                     </div>
+                    <div className='word-card__next muted'>Next review: {w.nextDueDate || '-'}</div>
                     <div style={{ marginTop:4 }}>{w.meaning || '-'}</div>
                     {w.example && <div className='muted' style={{ marginTop:4 }}>{w.example}</div>}
                     {w.source && <div className='muted' style={{ marginTop:4 }}>Source: {w.source}</div>}
-                    <div className='row' style={{ marginTop:8, justifyContent:'space-between', alignItems:'center' }}>
-                      <div className='muted' style={{ fontSize:12 }}>reps {w.reps} / lapses {w.lapses} / stability {Number(w.stability || 0).toFixed(2)}</div>
-                      <button className='pill' onClick={()=> startEdit(w)}>Edit</button>
-                    </div>
-                  </>
+                    <div className='word-card__stats muted'>reps {w.reps} / lapses {w.lapses} / stability {Number(w.stability || 0).toFixed(2)}</div>
+                  </div>
                 )}
               </div>
             ))}
