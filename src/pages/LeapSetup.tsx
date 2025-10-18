@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
 import { useLeapStore } from '~/state/leap'
 
+const CHUNK_SIZE = 100
+
 export default function LeapSetup() {
   const nav = useNavigate()
   const {
@@ -36,6 +38,8 @@ export default function LeapSetup() {
   const [selectedHeadings, setSelectedHeadings] = useState<Set<number>>(() => new Set())
   const [pendingSyncRange, setPendingSyncRange] = useState(true)
   const [hasAppliedSelection, setHasAppliedSelection] = useState(false)
+  const [previewMode, setPreviewMode] = useState<'all' | 'selected'>('all')
+  const [chunkIndex, setChunkIndex] = useState(0)
 
   useEffect(() => {
     void initMetadata()
@@ -88,11 +92,34 @@ export default function LeapSetup() {
     }
     return set
   }, [rangeBounds, catalog])
-  const catalogOrder = useMemo(() => {
-    const map = new Map<number, number>()
-    catalog.forEach((word, index) => { map.set(word.heading, index) })
-    return map
-  }, [catalog])
+  const sortedCatalog = useMemo(
+    () =>
+      [...catalog].sort(
+        (a, b) => a.heading - b.heading || a.phrase.localeCompare(b.phrase)
+      ),
+    [catalog]
+  )
+  const chunkRanges = useMemo(() => {
+    if (!availableHeadings) return []
+    const ranges: Array<{ start: number; end: number }> = []
+    for (let start = 1; start <= availableHeadings; start += CHUNK_SIZE) {
+      const end = Math.min(start + CHUNK_SIZE - 1, availableHeadings)
+      ranges.push({ start, end })
+    }
+    return ranges
+  }, [availableHeadings])
+  const currentChunkRange = chunkRanges.length
+    ? chunkRanges[Math.min(chunkIndex, chunkRanges.length - 1)]
+    : null
+
+  useEffect(() => {
+    if (previewMode !== 'all') return
+    if (!chunkRanges.length) {
+      if (chunkIndex !== 0) setChunkIndex(0)
+      return
+    }
+    if (chunkIndex >= chunkRanges.length) setChunkIndex(chunkRanges.length - 1)
+  }, [previewMode, chunkRanges, chunkIndex])
 
   useEffect(() => {
     if (!pendingSyncRange) return
@@ -108,57 +135,104 @@ export default function LeapSetup() {
       setPendingSyncRange(false)
       return
     }
-    setSelectedHeadings(prev => {
-      const next = new Set(prev)
-      rangeHeadings.forEach(h => next.add(h))
-      return next
-    })
+    setSelectedHeadings(() => new Set(rangeHeadings))
     setHasAppliedSelection(true)
     setPendingSyncRange(false)
   }, [pendingSyncRange, catalog, rangeBounds, rangeHeadings])
 
   const selectedCount = selectedHeadings.size
+
+  useEffect(() => {
+    if (previewMode === 'selected' && selectedCount === 0) setPreviewMode('all')
+  }, [previewMode, selectedCount])
+  useEffect(() => {
+    if (!catalog.length || !rangeBounds || pendingSyncRange) return
+    setPendingSyncRange(true)
+  }, [catalog.length, rangeBounds, pendingSyncRange])
   const selectedWords = useMemo(() => {
-    if (!catalog.length || selectedHeadings.size === 0) return []
+    if (!sortedCatalog.length || selectedHeadings.size === 0) return []
     const set = selectedHeadings
-    return catalog
-      .filter(word => set.has(word.heading))
-      .sort((a, b) => a.heading - b.heading || a.phrase.localeCompare(b.phrase))
-  }, [catalog, selectedHeadings])
+    return sortedCatalog.filter(word => set.has(word.heading))
+  }, [sortedCatalog, selectedHeadings])
   const rangeSummary = useMemo(() => {
     if (!catalog.length) return ''
     if (rangeBounds) {
-      return `#${rangeBounds.start}~#${rangeBounds.end} / \u9078\u629e ${selectedCount.toLocaleString('ja-JP')} \u8a9e`
+      return `#${rangeBounds.start}~#${rangeBounds.end} / 選択 ${selectedCount.toLocaleString('ja-JP')} 語`
     }
-    if (startHeading != null) return `#${startHeading} \u3092\u5165\u529b\u4e2d`
-    if (selectedCount > 0) return `\u9078\u629e ${selectedCount.toLocaleString('ja-JP')} \u8a9e`
-    if (hasAppliedSelection) return '\u9078\u629e\u4e2d\u306e\u30ab\u30fc\u30c9\u304c\u3042\u308a\u307e\u305b\u3093'
+    if (startHeading != null) return `#${startHeading} を入力中`
+    if (selectedCount > 0) return `選択 ${selectedCount.toLocaleString('ja-JP')} 語`
+    if (hasAppliedSelection) return '選択中のカードがありません'
     return ''
   }, [catalog.length, rangeBounds, selectedCount, startHeading, hasAppliedSelection])
   const displayWords = useMemo(() => {
-    if (!catalog.length) return []
-    const rangeSet = rangeHeadings
-    const selected = selectedHeadings
-    const focusHeading = startHeading
-    const priorityOf = (word: (typeof catalog)[number]) => {
-      if (focusHeading != null && word.heading === focusHeading) return 0
-      if (selected.has(word.heading)) return 1
-      if (rangeSet.has(word.heading)) return 2
-      return 3
+    if (!sortedCatalog.length) return []
+    if (previewMode === 'selected') {
+      if (selectedHeadings.size === 0) return []
+      return sortedCatalog.filter(word => selectedHeadings.has(word.heading))
     }
-    return [...catalog].sort((a, b) => {
-      const pa = priorityOf(a)
-      const pb = priorityOf(b)
-      if (pa !== pb) return pa - pb
-      const oa = catalogOrder.get(a.heading) ?? 0
-      const ob = catalogOrder.get(b.heading) ?? 0
-      return oa - ob
-    })
-  }, [catalog, startHeading, selectedHeadings, rangeHeadings, catalogOrder])
-  const previewBadge = useMemo(() => {
-    if (!catalog.length) return '\u30ab\u30fc\u30c9\u306a\u3057'
-    return `\u5168 ${displayWords.length.toLocaleString('ja-JP')} \u8a9e / \u9078\u629e ${selectedCount.toLocaleString('ja-JP')} \u8a9e`
-  }, [catalog.length, displayWords.length, selectedCount])
+    if (!currentChunkRange) return sortedCatalog
+    const { start, end } = currentChunkRange
+    return sortedCatalog.filter(word => word.heading >= start && word.heading <= end)
+  }, [sortedCatalog, previewMode, selectedHeadings, currentChunkRange])
+  const totalWordsLabel = `全 ${sortedCatalog.length.toLocaleString('ja-JP')} 語`
+  const selectedWordsLabel = `選択 ${selectedCount.toLocaleString('ja-JP')} 語`
+  const chunkCount = chunkRanges.length
+  const showChunkControls = previewMode === 'all' && chunkCount > 1 && sortedCatalog.length > 0
+  const chunkPrevDisabled = !showChunkControls || chunkIndex === 0
+  const chunkNextDisabled = !showChunkControls || chunkIndex >= chunkCount - 1
+  const chunkRangeLabel = currentChunkRange
+    ? `${currentChunkRange.start.toLocaleString('ja-JP')}~${currentChunkRange.end.toLocaleString('ja-JP')}`
+    : ''
+  const chunkSizeLabel = CHUNK_SIZE.toLocaleString('ja-JP')
+  const emptyMessage =
+    previewMode === 'selected'
+      ? '選択中の単語がありません。'
+      : 'この範囲の単語が見つかりません。'
+  const isStartFilled = startIndex.trim().length > 0
+  const isEndFilled = endIndex.trim().length > 0
+  const renderChunkControls = (variant?: 'footer') => {
+    if (!showChunkControls) return null
+    return (
+      <div className={`leap-chunk-controls${variant === 'footer' ? ' leap-chunk-controls--footer' : ''}`}>
+        <button
+          type='button'
+          className='leap-chunk-nav'
+          onClick={() => setChunkIndex(prev => Math.max(0, prev - 1))}
+          disabled={chunkPrevDisabled}
+          aria-label={`前の${chunkSizeLabel}語`}
+        >
+          &lt;
+        </button>
+        <div className='leap-chunk-track' role='radiogroup' aria-label='表示範囲'>
+          {chunkRanges.map((range, index) => {
+            const label = `${range.start.toLocaleString('ja-JP')}~${range.end.toLocaleString('ja-JP')}`
+            const active = index === chunkIndex
+            return (
+              <button
+                key={`${range.start}-${range.end}`}
+                type='button'
+                className={`leap-chunk-pill ${active ? 'active' : ''}`}
+                onClick={() => setChunkIndex(index)}
+                role='radio'
+                aria-checked={active}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        <button
+          type='button'
+          className='leap-chunk-nav'
+          onClick={() => setChunkIndex(prev => Math.min(chunkCount - 1, prev + 1))}
+          disabled={chunkNextDisabled}
+          aria-label={`次の${chunkSizeLabel}語`}
+        >
+          &gt;
+        </button>
+      </div>
+    )
+  }
 
   function handleStartChange(value: string) {
     setStartIndex(value)
@@ -274,11 +348,12 @@ export default function LeapSetup() {
         <div className='leap-setup-grid'>
           <form className='leap-setup-form' onSubmit={handleSubmit}>
             <section className='card leap-control-card'>
+              <h2 className='leap-control-title'>出題設定</h2>
               <div className='leap-range-line'>
                 <span className='leap-range-label'>見出し番号:</span>
                 <div className='leap-range-stack'>
                   <div className='leap-range-option'>
-                    <label className='leap-range-pill'>
+                    <label className={`leap-range-pill ${isStartFilled ? 'filled' : ''}`}>
                       <span className='leap-range-pill__label'>FROM</span>
                       <input
                         type='number'
@@ -289,13 +364,12 @@ export default function LeapSetup() {
                         max={availableHeadings || undefined}
                         value={startIndex}
                         onChange={event => handleStartChange(event.target.value)}
-                        placeholder='例: 1'
                       />
                     </label>
                     {errors.start && <p className='form-error leap-error'>{errors.start}</p>}
                   </div>
                   <div className='leap-range-option'>
-                    <label className='leap-range-pill'>
+                    <label className={`leap-range-pill ${isEndFilled ? 'filled' : ''}`}>
                       <span className='leap-range-pill__label'>TO</span>
                       <input
                         type='number'
@@ -306,7 +380,6 @@ export default function LeapSetup() {
                         max={availableHeadings || undefined}
                         value={endIndex}
                         onChange={event => handleEndChange(event.target.value)}
-                        placeholder='例: 2000'
                       />
                     </label>
                     {errors.end && <p className='form-error leap-error'>{errors.end}</p>}
@@ -372,15 +445,35 @@ export default function LeapSetup() {
           <section className='card leap-preview-panel' aria-live='polite'>
             <div className='leap-preview-header'>
               <h2 className='leap-control-title'>単語一覧</h2>
-              <span className='leap-control-pill'>{previewBadge}</span>
+              <div className='leap-preview-filters' role='group' aria-label='表示モード'>
+                <button
+                  type='button'
+                  className={`leap-preview-filter ${previewMode === 'all' ? 'active' : ''}`}
+                  onClick={() => setPreviewMode('all')}
+                >
+                  {totalWordsLabel}
+                </button>
+                <button
+                  type='button'
+                  className={`leap-preview-filter ${previewMode === 'selected' ? 'active' : ''}`}
+                  onClick={() => setPreviewMode('selected')}
+                  disabled={selectedCount === 0}
+                >
+                  {selectedWordsLabel}
+                </button>
+              </div>
             </div>
             <div className='leap-preview-body'>
+              {renderChunkControls()}
+              {previewMode === 'all' && chunkRangeLabel && (
+                <div className='leap-chunk-active muted'>表示: {chunkRangeLabel}</div>
+              )}
               {catalogLoading ? (
                 <div className='leap-preview-empty muted'>読み込み中...</div>
               ) : !catalog.length ? (
                 <div className='leap-preview-empty muted'>単語リストが見つかりません。</div>
               ) : displayWords.length === 0 ? (
-                <div className='leap-preview-empty muted'>選択中のカードがありません。</div>
+                <div className='leap-preview-empty muted'>{emptyMessage}</div>
               ) : (
                 <div className='leap-preview-list'>
                   {displayWords.map(word => {
@@ -405,19 +498,26 @@ export default function LeapSetup() {
                           <span className='leap-preview-card__heading'>#{word.heading}</span>
                           <span className='leap-preview-check' aria-hidden='true'>✓</span>
                         </div>
-                        <div className='leap-preview-card__phrase'>{word.phrase}</div>
-                        {word.meaning && <div className='leap-preview-card__meaning'>{word.meaning}</div>}
-                        {(word.example || word.source) && (
-                          <div className='leap-preview-card__details'>
-                            {word.example && <div className='leap-preview-card__example'>{word.example}</div>}
-                            {word.source && <div className='leap-preview-card__source'>{word.source}</div>}
+                        <div className='leap-preview-card__content'>
+                          <div className='leap-preview-card__phrase-row'>
+                            <span className='leap-preview-card__phrase'>{word.phrase}</span>
+                            {word.meaning && (
+                              <span className='leap-preview-card__meaning'>{word.meaning}</span>
+                            )}
                           </div>
-                        )}
+                          {(word.example || word.source) && (
+                            <div className='leap-preview-card__details'>
+                              {word.example && <div className='leap-preview-card__example'>{word.example}</div>}
+                              {word.source && <div className='leap-preview-card__source'>{word.source}</div>}
+                            </div>
+                          )}
+                        </div>
                       </article>
                     )
                   })}
                 </div>
               )}
+              {renderChunkControls('footer')}
             </div>
           </section>
         </div>
@@ -447,6 +547,7 @@ function clamp(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min
   return Math.min(Math.max(value, min), max)
 }
+
 
 
 
