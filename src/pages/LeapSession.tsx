@@ -1,8 +1,20 @@
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+  type MouseEvent
+} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
 import { addWord } from '~/db/sqlite'
 import { useLeapStore } from '~/state/leap'
+
+const VOICE_STORAGE_KEY = 'leap:speechVoiceURI'
+const RATE_STORAGE_KEY = 'leap:speechRateIndex'
+const RATE_VALUES = [0.25, 0.5, 0.75, 1]
 
 export default function LeapSession() {
   const nav = useNavigate()
@@ -34,6 +46,25 @@ export default function LeapSession() {
   const [restartBusy, setRestartBusy] = useState(false)
   const [speechAvailable, setSpeechAvailable] = useState(false)
   const [speaking, setSpeaking] = useState(false)
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [preferredVoiceURI, setPreferredVoiceURI] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      return window.localStorage.getItem(VOICE_STORAGE_KEY)
+    } catch {
+      return null
+    }
+  })
+  const [rateIndex, setRateIndex] = useState(() => {
+    if (typeof window === 'undefined') return RATE_VALUES.length - 1
+    try {
+      const stored = window.localStorage.getItem(RATE_STORAGE_KEY)
+      const parsed = stored !== null ? Number.parseInt(stored, 10) : Number.NaN
+      return Number.isFinite(parsed) && parsed >= 0 && parsed < RATE_VALUES.length ? parsed : RATE_VALUES.length - 1
+    } catch {
+      return RATE_VALUES.length - 1
+    }
+  })
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null)
 
   useEffect(() => {
@@ -57,38 +88,18 @@ export default function LeapSession() {
     if (!speechAvailable || typeof window === 'undefined' || !window.speechSynthesis) return
     const synth = window.speechSynthesis
 
-    const selectVoice = () => {
+    const updateVoices = () => {
       const voices = synth.getVoices()
       if (!voices.length) return
-
-      const scoreVoice = (entry: SpeechSynthesisVoice) => {
-        const lang = entry.lang?.toLowerCase() ?? ''
-        const name = entry.name?.toLowerCase() ?? ''
-        let score = 0
-        if (lang.startsWith('en')) score += 10
-        if (lang === 'en-us') score += 8
-        if (entry.default) score += 2
-        if (name.includes('google')) score += 6
-        if (name.includes('microsoft')) score += 5
-        if (name.includes('natural') || name.includes('neural')) score += 4
-        if (name.includes('premium')) score += 3
-        if (name.includes('female')) score += 1
-        return score
-      }
-
-      const best = voices
-        .map(entry => ({ entry, score: scoreVoice(entry) }))
-        .sort((a, b) => b.score - a.score)[0]?.entry
-
-      setVoice(best ?? voices[0] ?? null)
+      setAvailableVoices(voices)
     }
 
-    selectVoice()
+    updateVoices()
 
     if (typeof synth.addEventListener === 'function') {
-      synth.addEventListener('voiceschanged', selectVoice)
+      synth.addEventListener('voiceschanged', updateVoices)
       return () => {
-        synth.removeEventListener('voiceschanged', selectVoice)
+        synth.removeEventListener('voiceschanged', updateVoices)
       }
     }
 
@@ -97,7 +108,7 @@ export default function LeapSession() {
       if (typeof previousHandler === 'function') {
         previousHandler.call(this, event)
       }
-      selectVoice()
+      updateVoices()
     }
 
     synth.onvoiceschanged = handler
@@ -118,17 +129,62 @@ export default function LeapSession() {
     }
   }, [current, speechAvailable])
 
+  useEffect(() => {
+    if (!availableVoices.length) return
+    const preferred = preferredVoiceURI
+      ? availableVoices.find(entry => entry.voiceURI === preferredVoiceURI) ?? null
+      : null
+
+    const best =
+      availableVoices
+        .map(entry => ({ entry, score: scoreVoice(entry) }))
+        .sort((a, b) => b.score - a.score)[0]?.entry ?? null
+
+    const nextVoice = preferred ?? best ?? availableVoices[0] ?? null
+
+    setVoice(currentVoice => (currentVoice?.voiceURI === nextVoice?.voiceURI ? currentVoice : nextVoice))
+
+    if (!preferredVoiceURI && nextVoice?.voiceURI) {
+      setPreferredVoiceURI(nextVoice.voiceURI)
+    } else if (preferredVoiceURI && !preferred && preferredVoiceURI !== nextVoice?.voiceURI) {
+      setPreferredVoiceURI(nextVoice?.voiceURI ?? null)
+    }
+  }, [availableVoices, preferredVoiceURI])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (preferredVoiceURI) {
+        window.localStorage.setItem(VOICE_STORAGE_KEY, preferredVoiceURI)
+      } else {
+        window.localStorage.removeItem(VOICE_STORAGE_KEY)
+      }
+    } catch {
+      // ignore storage failures (private mode, etc.)
+    }
+  }, [preferredVoiceURI])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(RATE_STORAGE_KEY, String(rateIndex))
+    } catch {
+      // ignore storage failures
+    }
+  }, [rateIndex])
+
   const speakPhrase = useCallback(() => {
     if (!speechAvailable || !current?.phrase || typeof window === 'undefined' || !window.speechSynthesis) return
     const utterance = new SpeechSynthesisUtterance(current.phrase)
     if (voice) utterance.voice = voice
     utterance.lang = voice?.lang ?? 'en-US'
+    utterance.rate = RATE_VALUES[rateIndex] ?? 1
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
     window.speechSynthesis.cancel()
     setSpeaking(true)
     window.speechSynthesis.speak(utterance)
-  }, [current, speechAvailable, voice])
+  }, [current, rateIndex, speechAvailable, voice])
 
   const handleSpeechClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
@@ -144,6 +200,34 @@ export default function LeapSession() {
     },
     [current, speakPhrase, speaking, speechAvailable]
   )
+
+  const handleVoiceChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const selectedURI = event.target.value
+      if (!selectedURI || !availableVoices.length) return
+      const next = availableVoices.find(entry => entry.voiceURI === selectedURI)
+      if (!next) return
+      if (preferredVoiceURI !== next.voiceURI) {
+        setPreferredVoiceURI(next.voiceURI)
+      }
+      setVoice(currentVoice => (currentVoice?.voiceURI === next.voiceURI ? currentVoice : next))
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+        setSpeaking(false)
+      }
+    },
+    [availableVoices, preferredVoiceURI]
+  )
+
+  const handleRateChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const nextIndex = Number.parseInt(event.target.value, 10)
+    if (!Number.isFinite(nextIndex) || nextIndex < 0 || nextIndex >= RATE_VALUES.length) return
+    setRateIndex(nextIndex)
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+      setSpeaking(false)
+    }
+  }, [])
 
   const cardContent = useMemo(() => {
     if (!current) return null
@@ -191,6 +275,19 @@ export default function LeapSession() {
       </div>
     )
   }, [current, flipped])
+
+  const voiceOptions = useMemo(() => {
+    if (!availableVoices.length) return []
+    return availableVoices
+      .map(entry => ({ entry, score: scoreVoice(entry) }))
+      .sort((a, b) => b.score - a.score)
+      .map(({ entry }) => ({
+        voiceURI: entry.voiceURI,
+        label: formatVoiceLabel(entry)
+      }))
+  }, [availableVoices])
+  const selectedVoiceURI = voice?.voiceURI ?? (voiceOptions[0]?.voiceURI ?? '')
+  const selectedRateLabel = formatRateLabel(rateIndex)
 
   async function handleKnown() {
     if (busy || !current) return
@@ -314,16 +411,51 @@ export default function LeapSession() {
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, width:'100%' }}>
             {cardContent}
             {speechAvailable && current?.phrase && (
-              <button
-                type='button'
-                className='icon-button'
-                aria-label={speaking ? 'Stop pronunciation' : 'Play pronunciation'}
-                title={speaking ? 'Stop pronunciation' : 'Play pronunciation'}
-                aria-pressed={speaking}
-                onClick={handleSpeechClick}
-              >
-                <SpeakerIcon active={speaking} />
-              </button>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
+                <button
+                  type='button'
+                  className='icon-button'
+                  aria-label={speaking ? 'Stop pronunciation' : 'Play pronunciation'}
+                  title={speaking ? 'Stop pronunciation' : 'Play pronunciation'}
+                  aria-pressed={speaking}
+                  onClick={handleSpeechClick}
+                >
+                  <SpeakerIcon active={speaking} />
+                </button>
+                <label className='muted' style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                  <span>Speed: {selectedRateLabel}</span>
+                  <input
+                    type='range'
+                    min={0}
+                    max={RATE_VALUES.length - 1}
+                    step={1}
+                    value={rateIndex}
+                    onChange={handleRateChange}
+                    style={{ width:160 }}
+                  />
+                  <div style={{ display:'flex', justifyContent:'space-between', width:160, fontSize:12 }}>
+                    {RATE_VALUES.map(rate => (
+                      <span key={rate}>{rate}×</span>
+                    ))}
+                  </div>
+                </label>
+                {voiceOptions.length > 1 && (
+                  <label className='muted' style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span>Voice</span>
+                    <select
+                      value={selectedVoiceURI}
+                      onChange={handleVoiceChange}
+                      style={{ padding:'4px 8px', borderRadius:6, border:'1px solid currentColor', fontSize:14 }}
+                    >
+                      {voiceOptions.map(option => (
+                        <option key={option.voiceURI} value={option.voiceURI}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -384,6 +516,41 @@ function SpeakerIcon({ active }: { active: boolean }) {
       <path d='M17.5 5.5a7 7 0 0 1 0 12.99' opacity={active ? 1 : 0.3} />
     </svg>
   )
+}
+
+function scoreVoice(entry: SpeechSynthesisVoice) {
+  const lang = entry.lang?.toLowerCase() ?? ''
+  const name = entry.name?.toLowerCase() ?? ''
+  let score = 0
+  if (lang.startsWith('en')) score += 10
+  if (lang === 'en-us') score += 8
+  if (lang === 'en-gb') score += 6
+  if (!entry.localService) score += 6
+  if (entry.default) score += 2
+  if (name.includes('google')) score += 6
+  if (name.includes('microsoft')) score += 5
+  if (name.includes('natural') || name.includes('neural')) score += 4
+  if (name.includes('premium')) score += 3
+  if (name.includes('female')) score += 1
+  return score
+}
+
+function formatVoiceLabel(entry: SpeechSynthesisVoice) {
+  const base = entry.name || entry.voiceURI
+  const lang = entry.lang ? ` · ${entry.lang}` : ''
+  const tags: string[] = []
+  if (entry.default) tags.push('default')
+  if (!entry.localService) tags.push('cloud')
+  const lowerName = entry.name?.toLowerCase() ?? ''
+  if (lowerName.includes('neural') || lowerName.includes('natural')) tags.push('neural')
+  if (lowerName.includes('preview') || lowerName.includes('beta')) tags.push('preview')
+  return `${base}${lang}${tags.length ? ` · ${tags.join(', ')}` : ''}`
+}
+
+function formatRateLabel(index: number) {
+  const clampedIndex = Math.max(0, Math.min(RATE_VALUES.length - 1, index))
+  const rate = RATE_VALUES[clampedIndex] ?? 1
+  return `${rate}×`
 }
 
 function isHttpUrl(value: string) {
