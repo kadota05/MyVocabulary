@@ -268,6 +268,13 @@ export default function Home(){
           </button>
           <button
             type='button'
+            className='fab-item fab-item--leap'
+            onClick={()=>{ setFabOpen(false); nav('/leap') }}
+          >
+            必携英単語Leap
+          </button>
+          <button
+            type='button'
             className='fab-item'
             onClick={()=>{ setFabOpen(false); setNewWordOpen(true) }}
           >
