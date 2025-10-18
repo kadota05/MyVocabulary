@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, MouseEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
 import { useLeapStore } from '~/state/leap'
@@ -54,6 +54,8 @@ export default function LeapSetup() {
     addWrongToWordlist: false,
     order: 'random'
   })
+  const skipClickRef = useRef(false)
+  const manualOverridesRef = useRef<Map<number, boolean>>(new Map())
 
   useEffect(() => {
     exitSession()
@@ -156,16 +158,17 @@ export default function LeapSetup() {
       setSelectedHeadings(new Set<number>())
       setHasAppliedSelection(false)
       setPendingSyncRange(false)
+      manualOverridesRef.current.clear()
       return
     }
     if (!rangeBounds || rangeHeadings.size === 0) {
       setSelectedHeadings(new Set<number>())
       setHasAppliedSelection(false)
       setPendingSyncRange(false)
+      manualOverridesRef.current.clear()
       return
     }
-    setSelectedHeadings(() => new Set(rangeHeadings))
-    setHasAppliedSelection(true)
+    applySelectionFromRange()
     setPendingSyncRange(false)
   }, [pendingSyncRange, catalog, rangeBounds, rangeHeadings])
 
@@ -263,6 +266,21 @@ export default function LeapSetup() {
     )
   }
 
+  function applySelectionFromRange() {
+    const base = new Set(rangeHeadings)
+    const nextOverrides = new Map<number, boolean>()
+    manualOverridesRef.current.forEach((checked, heading) => {
+      const defaultSelected = base.has(heading)
+      if (checked === defaultSelected) return
+      nextOverrides.set(heading, checked)
+      if (checked) base.add(heading)
+      else base.delete(heading)
+    })
+    manualOverridesRef.current = nextOverrides
+    setSelectedHeadings(base)
+    setHasAppliedSelection(base.size > 0)
+  }
+
   function applyFormDefaults(defaults: FormDefaults) {
     setStartIndex(defaults.startIndex)
     setEndIndex(defaults.endIndex)
@@ -274,6 +292,7 @@ export default function LeapSetup() {
     setPreviewMode('all')
     setChunkIndex(0)
     setErrors({})
+    manualOverridesRef.current.clear()
   }
 
   function handleReset() {
@@ -317,6 +336,9 @@ export default function LeapSetup() {
       nextSize = next.size
       return next
     })
+    const defaultSelected = rangeHeadings.has(heading)
+    if (nextChecked === defaultSelected) manualOverridesRef.current.delete(heading)
+    else manualOverridesRef.current.set(heading, nextChecked)
     if (nextChecked || nextSize > 0 || rangeHeadings.size > 0) setHasAppliedSelection(true)
     else setHasAppliedSelection(false)
   }
@@ -331,6 +353,22 @@ export default function LeapSetup() {
       event.preventDefault()
       handleCardToggle(heading)
     }
+  }
+
+  const handleCardPointerUp = (event: PointerEvent<HTMLElement>, heading: number) => {
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return
+    event.preventDefault()
+    skipClickRef.current = true
+    handleCardToggle(heading)
+  }
+
+  const handleCardClick = (event: MouseEvent<HTMLElement>, heading: number) => {
+    event.preventDefault()
+    if (skipClickRef.current) {
+      skipClickRef.current = false
+      return
+    }
+    handleCardToggle(heading)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -538,7 +576,8 @@ export default function LeapSetup() {
                         role='button'
                         tabIndex={0}
                         aria-pressed={checked}
-                        onClick={event => { event.preventDefault(); handleCardToggle(word.heading) }}
+                        onClick={event => handleCardClick(event, word.heading)}
+                        onPointerUp={event => handleCardPointerUp(event, word.heading)}
                         onKeyDown={event => handleCardKeyDown(event, word.heading)}
                       >
                         <div className='leap-preview-card__meta'>

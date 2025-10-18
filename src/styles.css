@@ -160,16 +160,17 @@
 .leap-order-pill input{position:absolute; inset:0; opacity:0; pointer-events:none;}
 .leap-order-pill.active{background:rgba(56,189,248,.24); border-color:rgba(56,189,248,.75); color:#e0f2fe; box-shadow:0 14px 28px rgba(14,165,233,.22);}
 .leap-actions{display:flex; align-items:center; gap:16px; margin-top:8px;}
-.leap-checkbox-inline{position:relative; display:flex; align-items:center; gap:12px; padding:10px 16px; border-radius:14px; border:1px solid rgba(51,65,85,.6); background:rgba(15,23,42,.7); font-weight:600; letter-spacing:0.02em; color:var(--muted); cursor:pointer; transition:border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;}
+.leap-checkbox-inline{position:relative; display:inline-flex; align-items:center; gap:10px; font-weight:600; letter-spacing:0.02em; color:var(--muted); cursor:pointer; padding:0; border:none; background:transparent;}
 .leap-checkbox-inline input{position:absolute; inset:0; opacity:0; cursor:pointer;}
-.leap-checkbox-inline:hover{border-color:#3b82f6; color:#e0f2fe; box-shadow:0 12px 24px rgba(59,130,246,.18);}
+.leap-checkbox-inline:hover .leap-checkbox-box{border-color:#3b82f6;}
+.leap-checkbox-inline:hover .leap-checkbox-label{color:#e0f2fe;}
 .leap-checkbox-inline input:focus-visible + .leap-checkbox-box{outline:2px solid rgba(96,200,255,.9); outline-offset:2px;}
 .leap-checkbox-inline input:checked ~ .leap-checkbox-label{color:#e0f2fe;}
-.leap-checkbox-box{position:relative; width:20px; height:20px; border-radius:6px; border:2px solid rgba(56,189,248,.75); display:flex; align-items:center; justify-content:center; background:rgba(14,116,144,.18); transition:background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;}
+.leap-checkbox-box{position:relative; width:20px; height:20px; border-radius:6px; border:2px solid rgba(56,189,248,.75); display:flex; align-items:center; justify-content:center; background:transparent; transition:background .18s ease, border-color .18s ease, box-shadow .18s ease;}
 .leap-checkbox-box::after{content:''; width:8px; height:14px; border-right:2px solid transparent; border-bottom:2px solid transparent; transform:rotate(45deg); transition:border-color .18s ease;}
-.leap-checkbox-inline input:checked + .leap-checkbox-box{background:rgba(56,189,248,.3); border-color:rgba(56,189,248,.95); box-shadow:0 8px 20px rgba(14,165,233,.25);}
+.leap-checkbox-inline input:checked + .leap-checkbox-box{background:rgba(56,189,248,.28); border-color:rgba(56,189,248,.95); box-shadow:0 8px 20px rgba(14,165,233,.2);}
 .leap-checkbox-inline input:checked + .leap-checkbox-box::after{border-color:#e0f2fe;}
-.leap-checkbox-label{color:inherit;}
+.leap-checkbox-label{color:inherit; transition:color .18s ease;}
 .leap-preview-panel{flex:0 0 440px; width:100%; max-width:440px; display:flex; flex-direction:column; gap:20px; padding:24px; min-height:360px; background:rgba(10,16,30,.94); border:1px solid rgba(15,118,110,.22); box-sizing:border-box;}
 .leap-preview-header{display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;}
 .leap-preview-body{flex:1; display:flex; flex-direction:column; gap:10px; overflow:auto; padding-right:6px;}
@@ -197,7 +198,7 @@
 .leap-preview-filter:hover{border-color:rgba(56,189,248,.6); color:#e0f2fe;}
 .leap-preview-filter.active{border-color:rgba(56,189,248,.85); background:rgba(56,189,248,.22); color:#e0f2fe; box-shadow:0 12px 20px rgba(14,165,233,.22);}
 .leap-preview-filter:disabled{opacity:.4; cursor:default;}
-.leap-chunk-controls{display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(51,65,85,.5); background:rgba(15,23,42,.65); flex-wrap:nowrap; width:100%;}
+.leap-chunk-controls{display:flex; align-items:center; gap:8px; padding:6px 16px; border-radius:12px; border:1px solid rgba(51,65,85,.5); background:rgba(15,23,42,.65); flex-wrap:nowrap; width:100%; box-sizing:border-box;}
 .leap-chunk-controls--footer{justify-content:center; margin-top:16px;}
 .leap-chunk-nav{appearance:none; width:32px; height:32px; border-radius:999px; border:1px solid rgba(56,189,248,.45); background:transparent; color:var(--fg); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; cursor:pointer; transition:border-color .18s ease, background .18s ease, color .18s ease;}
 .leap-chunk-nav:hover:not(:disabled){border-color:rgba(56,189,248,.75); background:rgba(56,189,248,.2); color:#e0f2fe;}
@@ -276,7 +277,7 @@
   .leap-control-card{padding:18px;}
   .leap-range-stack{gap:8px;}
   .leap-range-pill{padding:10px 14px;}
-  .leap-range-input{flex:0 0 82px; max-width:82px; font-size:15px;}
+  .leap-range-input{flex:1; min-width:0; font-size:15px;}
   .leap-range-line{gap:8px;}
   .leap-order-row{flex-direction:column; align-items:flex-start; gap:8px;}
   .leap-order-pills{width:100%;}
@@ -291,7 +292,7 @@
   .leap-preview-body{padding-right:2px; gap:8px;}
   .leap-preview-filters{width:100%; justify-content:space-between; gap:6px;}
   .leap-preview-filter{flex:1; padding:6px 10px; font-size:12px;}
-  .leap-chunk-controls{flex-direction:row; align-items:center; gap:6px; padding:8px;}
+  .leap-chunk-controls{flex-direction:row; align-items:center; gap:6px; padding:8px 12px; box-sizing:border-box;}
   .leap-chunk-controls--footer{margin-top:20px;}
   .leap-chunk-nav{width:30px; height:30px;}
   .leap-chunk-track{flex:1 1 auto; width:auto;}

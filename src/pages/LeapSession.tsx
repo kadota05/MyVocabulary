@@ -9,6 +9,7 @@ export default function LeapSession() {
   const {
     config,
     current,
+    currentSource,
     remaining,
     retry,
     markKnown,
@@ -19,6 +20,7 @@ export default function LeapSession() {
   } = useLeapStore(state => ({
     config: state.config,
     current: state.current,
+    currentSource: state.currentSource,
     remaining: state.remaining,
     retry: state.retry,
     markKnown: state.markKnown,
@@ -145,7 +147,10 @@ export default function LeapSession() {
   }
 
   const sessionFinished = !current && remaining.length === 0 && retry.length === 0
-  const remainingCount = remaining.length + (current ? 1 : 0)
+  const remainingCount = remaining.length + (current && currentSource === 'remaining' ? 1 : 0)
+  const retryCount = retry.length + (current && currentSource === 'retry' ? 1 : 0)
+  const totalSelected = sessionWords.length
+  const totalSelectedLabel = totalSelected.toLocaleString('ja-JP')
 
   return (
     <div className='home-screen leap-session-screen'>
@@ -168,8 +173,8 @@ export default function LeapSession() {
       <main className='leap-session-main'>
         {sessionFinished ? (
           <div className='card center leap-finished-card'>
-            <div className='leap-finished-title'>セッション完了！</div>
-            <p className='muted'>選択した範囲の学習が終了しました。</p>
+            <div className='leap-finished-title'>お疲れさまでした！</div>
+            <p className='muted'>{totalSelectedLabel}単語の学習が終了しました。</p>
             <div className='leap-finished-actions'>
               <button
                 type='button'
@@ -212,7 +217,7 @@ export default function LeapSession() {
         <footer className='leap-session-footer'>
           <div className='leap-session-stats'>
             <span>Remaining: {remainingCount}</span>
-            <span>Retry later: {retry.length}</span>
+            <span>Retry later: {retryCount}</span>
           </div>
           <div className='leap-session-actions'>
             <button
@@ -253,3 +258,4 @@ function isHttpUrl(value: string) {
     return false
   }
 }
+

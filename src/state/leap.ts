@@ -14,6 +14,7 @@ type LeapState = {
   loading: boolean
   config: LeapConfig | null
   current?: LeapWord
+  currentSource?: 'remaining' | 'retry'
   remaining: LeapWord[]
   retry: LeapWord[]
   sessionWords: LeapWord[]
@@ -29,18 +30,13 @@ type LeapState = {
   clearError: () => void
 }
 
-type PickResult = {
-  next?: LeapWord
-  remaining: LeapWord[]
-  retry: LeapWord[]
-}
-
 export const useLeapStore = create<LeapState>((set, get) => ({
   totalAvailable: 0,
   ready: false,
   loading: false,
   config: null,
   current: undefined,
+  currentSource: undefined,
   remaining: [],
   retry: [],
   sessionWords: [],
@@ -84,13 +80,13 @@ export const useLeapStore = create<LeapState>((set, get) => ({
       const orderedRemaining = normalizedOrder === 'number'
         ? [...words].sort((a, b) => a.heading - b.heading)
         : shuffle(words)
-      const initialRetry: LeapWord[] = []
-      const { next, remaining, retry } = pickNext(normalizedOrder, orderedRemaining, initialRetry)
+      const { next, remaining, retry, source } = takeNextCard(orderedRemaining, [])
       set({
         config,
         order: normalizedOrder,
-        ready: true,
+        ready: Boolean(next),
         current: next,
+        currentSource: source,
         remaining,
         retry,
         sessionWords: words,
@@ -99,24 +95,31 @@ export const useLeapStore = create<LeapState>((set, get) => ({
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : '出題の準備に失敗しました。'
-      set({ loading: false, error: message, ready: false, current: undefined, remaining: [], retry: [], sessionWords: [] })
+      set({
+        loading: false,
+        error: message,
+        ready: false,
+        current: undefined,
+        currentSource: undefined,
+        remaining: [],
+        retry: [],
+        sessionWords: []
+      })
       return { success: false, error: message }
     }
   },
   markKnown: () => {
-    const { current, remaining, retry, order } = get()
+    const { current, remaining, retry } = get()
     if (!current) return
-    const { next, remaining: nextRemaining, retry: nextRetry } = pickNext(order, remaining, retry)
-    set({ current: next, remaining: nextRemaining, retry: nextRetry })
+    const { next, remaining: nextRemaining, retry: nextRetry, source } = takeNextCard(remaining, retry)
+    set({ current: next, currentSource: source, remaining: nextRemaining, retry: nextRetry })
   },
   markWrong: async () => {
     const { current, remaining, retry, order } = get()
     if (!current) return null
-    const retryPool = order === 'number'
-      ? insertSorted(retry, current)
-      : [...retry, current]
-    const { next, remaining: nextRemaining, retry: updatedRetry } = pickNext(order, remaining, retryPool)
-    set({ current: next, remaining: nextRemaining, retry: updatedRetry })
+    const retryPool = appendToRetry(order, retry, current)
+    const { next, remaining: nextRemaining, retry: nextRetry, source } = takeNextCard(remaining, retryPool)
+    set({ current: next, currentSource: source, remaining: nextRemaining, retry: nextRetry })
     return current
   },
   exitSession: () => {
@@ -124,6 +127,7 @@ export const useLeapStore = create<LeapState>((set, get) => ({
       ready: false,
       config: null,
       current: undefined,
+      currentSource: undefined,
       remaining: [],
       retry: [],
       sessionWords: [],
@@ -133,47 +137,21 @@ export const useLeapStore = create<LeapState>((set, get) => ({
   clearError: () => set({ error: null })
 }))
 
-function pickNext(order: LeapOrder, remaining: LeapWord[], retry: LeapWord[]): PickResult {
-  if (remaining.length === 0 && retry.length === 0) {
-    return { next: undefined, remaining, retry }
+function takeNextCard(remaining: LeapWord[], retry: LeapWord[]): { next?: LeapWord; source?: 'remaining' | 'retry'; remaining: LeapWord[]; retry: LeapWord[] } {
+  if (remaining.length > 0) {
+    const [next, ...rest] = remaining
+    return { next, source: 'remaining', remaining: rest, retry: [...retry] }
   }
-
-  if (order === 'random') {
-    const total = remaining.length + retry.length
-    const pick = Math.floor(Math.random() * total)
-    if (pick < remaining.length) {
-      const idx = pick
-      const next = remaining[idx]
-      return {
-        next,
-        remaining: [...remaining.slice(0, idx), ...remaining.slice(idx + 1)],
-        retry
-      }
-    }
-    const idx = pick - remaining.length
-    const next = retry[idx]
-    return {
-      next,
-      remaining,
-      retry: [...retry.slice(0, idx), ...retry.slice(idx + 1)]
-    }
-  }
-
-  const hasRemaining = remaining.length > 0
-  const hasRetry = retry.length > 0
-  let fromRetry = false
-  if (hasRemaining && hasRetry) {
-    fromRetry = Math.random() < 0.5
-  } else if (hasRetry) {
-    fromRetry = true
-  }
-
-  if (fromRetry) {
+  if (retry.length > 0) {
     const [next, ...rest] = retry
-    return { next, remaining, retry: rest }
+    return { next, source: 'retry', remaining: [...remaining], retry: rest }
   }
-  const [next, ...rest] = remaining
-  return { next, remaining: rest ?? [], retry }
+  return { next: undefined, source: undefined, remaining: [...remaining], retry: [...retry] }
+}
+
+function appendToRetry(order: LeapOrder, retry: LeapWord[], word: LeapWord): LeapWord[] {
+  const filtered = retry.filter(existing => !isSameWord(existing, word))
+  return order === 'number' ? insertSorted(filtered, word) : [...filtered, word]
 }
 
 function insertSorted(list: LeapWord[], item: LeapWord): LeapWord[] {
@@ -189,6 +167,10 @@ function insertSorted(list: LeapWord[], item: LeapWord): LeapWord[] {
   }
   if (!inserted) next.push(item)
   return next
+}
+
+function isSameWord(a: LeapWord, b: LeapWord): boolean {
+  return a.heading === b.heading && a.phrase === b.phrase
 }
 
 function shuffle<T>(items: T[]): T[] {
