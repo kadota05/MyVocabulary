@@ -145,6 +145,7 @@ export default function LeapSession() {
   }
 
   const sessionFinished = !current && remaining.length === 0 && retry.length === 0
+  const remainingCount = remaining.length + (current ? 1 : 0)
 
   return (
     <div className='home-screen leap-session-screen'>
@@ -210,7 +211,7 @@ export default function LeapSession() {
       {!sessionFinished && (
         <footer className='leap-session-footer'>
           <div className='leap-session-stats'>
-            <span>Remaining: {remaining.length}</span>
+            <span>Remaining: {remainingCount}</span>
             <span>Retry later: {retry.length}</span>
           </div>
           <div className='leap-session-actions'>

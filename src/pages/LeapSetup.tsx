@@ -1,9 +1,15 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
 import { useLeapStore } from '~/state/leap'
 
 const CHUNK_SIZE = 100
+type FormDefaults = {
+  startIndex: string
+  endIndex: string
+  addWrongToWordlist: boolean
+  order: 'random' | 'number'
+}
 
 export default function LeapSetup() {
   const nav = useNavigate()
@@ -37,23 +43,28 @@ export default function LeapSetup() {
   const [order, setOrder] = useState<'random' | 'number'>('random')
   const [submitBusy, setSubmitBusy] = useState(false)
   const [errors, setErrors] = useState<{ start?: string; end?: string }>({})
-  const [selectedHeadings, setSelectedHeadings] = useState<Set<number>>(() => new Set())
+  const [selectedHeadings, setSelectedHeadings] = useState<Set<number>>(() => new Set<number>())
   const [pendingSyncRange, setPendingSyncRange] = useState(true)
   const [hasAppliedSelection, setHasAppliedSelection] = useState(false)
   const [previewMode, setPreviewMode] = useState<'all' | 'selected'>('all')
   const [chunkIndex, setChunkIndex] = useState(0)
+  const defaultFormRef = useRef<FormDefaults>({
+    startIndex: '',
+    endIndex: '',
+    addWrongToWordlist: false,
+    order: 'random'
+  })
 
   useEffect(() => {
     exitSession()
-    setStartIndex('')
-    setEndIndex('')
-    setAddWrongToWordlist(false)
-    setOrder('random')
-    setSelectedHeadings(new Set())
-    setPendingSyncRange(true)
-    setHasAppliedSelection(false)
-    setPreviewMode('all')
-    setChunkIndex(0)
+    const blankDefaults: FormDefaults = {
+      startIndex: '',
+      endIndex: '',
+      addWrongToWordlist: false,
+      order: 'random'
+    }
+    defaultFormRef.current = blankDefaults
+    applyFormDefaults(blankDefaults)
   }, [exitSession])
 
   useEffect(() => {
@@ -62,11 +73,14 @@ export default function LeapSetup() {
 
   useEffect(() => {
     if (!config) return
-    setStartIndex(String(config.startIndex))
-    setEndIndex(String(config.endIndex))
-    setAddWrongToWordlist(config.addWrongToWordlist)
-    setOrder(config.order)
-    setPendingSyncRange(true)
+    const defaults: FormDefaults = {
+      startIndex: String(config.startIndex),
+      endIndex: String(config.endIndex),
+      addWrongToWordlist: config.addWrongToWordlist,
+      order: config.order
+    }
+    defaultFormRef.current = defaults
+    applyFormDefaults(defaults)
     setHasAppliedSelection(true)
   }, [config])
 
@@ -139,13 +153,13 @@ export default function LeapSetup() {
   useEffect(() => {
     if (!pendingSyncRange) return
     if (!catalog.length) {
-      setSelectedHeadings(new Set())
+      setSelectedHeadings(new Set<number>())
       setHasAppliedSelection(false)
       setPendingSyncRange(false)
       return
     }
     if (!rangeBounds || rangeHeadings.size === 0) {
-      setSelectedHeadings(new Set())
+      setSelectedHeadings(new Set<number>())
       setHasAppliedSelection(false)
       setPendingSyncRange(false)
       return
@@ -247,6 +261,23 @@ export default function LeapSetup() {
         </button>
       </div>
     )
+  }
+
+  function applyFormDefaults(defaults: FormDefaults) {
+    setStartIndex(defaults.startIndex)
+    setEndIndex(defaults.endIndex)
+    setAddWrongToWordlist(defaults.addWrongToWordlist)
+    setOrder(defaults.order)
+    setSelectedHeadings(new Set<number>())
+    setPendingSyncRange(true)
+    setHasAppliedSelection(false)
+    setPreviewMode('all')
+    setChunkIndex(0)
+    setErrors({})
+  }
+
+  function handleReset() {
+    applyFormDefaults(defaultFormRef.current)
   }
 
   function handleStartChange(value: string) {
@@ -436,7 +467,8 @@ export default function LeapSetup() {
                     checked={addWrongToWordlist}
                     onChange={event => setAddWrongToWordlist(event.target.checked)}
                   />
-                  <span>間違えたカードを保存</span>
+                  <span className='leap-checkbox-box' aria-hidden='true' />
+                  <span className='leap-checkbox-label'>間違えたカードを保存</span>
                 </label>
                 <button
                   type='submit'
@@ -448,10 +480,10 @@ export default function LeapSetup() {
                 <button
                   type='button'
                   className='btn'
-                  onClick={() => nav('/')}
+                  onClick={handleReset}
                   disabled={loading || submitBusy}
                 >
-                  キャンセル
+                  リセット
                 </button>
               </div>
             </section>
