@@ -131,22 +131,22 @@
 .leap-header .home-header__brand{text-transform:none; letter-spacing:0.08em;}
 .leap-setup-main{flex:1; display:flex; justify-content:center; padding:40px clamp(24px, 6vw, 120px);}
 .leap-setup-grid{width:100%; max-width:1080px; display:flex; gap:28px; align-items:flex-start; justify-content:center; margin:0 auto;}
-.leap-setup-form{flex:0 0 420px; width:100%; max-width:420px; display:flex; flex-direction:column; gap:20px;}
+.leap-setup-form{flex:0 0 440px; width:100%; max-width:440px; display:flex; flex-direction:column; gap:20px;}
 .leap-control-card{display:flex; flex-direction:column; gap:20px; padding:24px; background:rgba(21,31,55,.94); border:1px solid rgba(56,189,248,.18);}
 .leap-control-title{margin:0; font-size:18px; font-weight:700; letter-spacing:0.06em; color:var(--fg);}
 .leap-control-pill{font-size:13px; letter-spacing:0.04em; color:var(--muted); background:rgba(15,23,42,.75); border:1px solid rgba(51,65,85,.55); border-radius:999px; padding:6px 12px; white-space:nowrap;}
 .leap-range-line{display:flex; flex-direction:column; align-items:flex-start; gap:12px;}
 .leap-range-label{font-size:13px; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; font-weight:600; display:flex; align-items:center;}
-.leap-range-stack{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;}
-.leap-range-option{display:flex; flex-direction:column; gap:6px; min-width:150px;}
-.leap-range-pill{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px; border-radius:999px; border:1px solid rgba(56,189,248,.55); background:transparent; transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;}
+.leap-range-stack{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px;}
+.leap-range-option{display:flex; flex-direction:column; gap:6px; min-width:140px;}
+.leap-range-pill{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 14px; border-radius:999px; border:1px solid rgba(56,189,248,.55); background:transparent; transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;}
 .leap-range-pill:hover,
 .leap-range-pill:focus-within{border-color:rgba(56,189,248,.75); background:rgba(56,189,248,.12);}
 .leap-range-pill.filled{border-color:rgba(56,189,248,.75); background:rgba(56,189,248,.24); box-shadow:0 14px 28px rgba(14,165,233,.22);}
 .leap-range-pill.filled:hover,
 .leap-range-pill.filled:focus-within{border-color:rgba(56,189,248,.95); background:rgba(56,189,248,.3); box-shadow:0 16px 32px rgba(14,165,233,.28);}
 .leap-range-pill__label{font-size:12px; letter-spacing:0.08em; color:var(--muted);}
-.leap-range-input{flex:0 0 96px; max-width:96px; background:transparent; border:none; color:var(--fg); font-size:16px; letter-spacing:0.04em; text-align:center; padding:0; outline:none; appearance:textfield;}
+.leap-range-input{flex:0 0 88px; max-width:88px; background:transparent; border:none; color:var(--fg); font-size:16px; letter-spacing:0.04em; text-align:center; padding:0; outline:none; appearance:textfield;}
 .leap-range-input::placeholder{color:rgba(148,163,184,.6);}
 .leap-range-input::-webkit-outer-spin-button,
 .leap-range-input::-webkit-inner-spin-button{margin:0;}
@@ -164,7 +164,7 @@
 .leap-actions{display:flex; align-items:center; gap:16px; margin-top:8px;}
 .leap-checkbox-inline{display:flex; align-items:center; gap:8px; font-weight:600; letter-spacing:0.02em;}
 .leap-checkbox-inline input{width:18px; height:18px;}
-.leap-preview-panel{flex:0 1 640px; width:100%; display:flex; flex-direction:column; gap:20px; padding:24px; min-height:360px; background:rgba(10,16,30,.94); border:1px solid rgba(15,118,110,.22);}
+.leap-preview-panel{flex:0 1 680px; width:100%; display:flex; flex-direction:column; gap:20px; padding:24px; min-height:360px; background:rgba(10,16,30,.94); border:1px solid rgba(15,118,110,.22);}
 .leap-preview-header{display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;}
 .leap-preview-body{flex:1; display:flex; flex-direction:column; gap:10px; overflow:auto; padding-right:6px;}
 .leap-preview-list{display:flex; flex-direction:column; gap:10px;}
@@ -193,7 +193,7 @@
 .leap-preview-filter:disabled{opacity:.4; cursor:default;}
 .leap-chunk-controls{display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(51,65,85,.5); background:rgba(15,23,42,.65); flex-wrap:nowrap; width:100%;}
 .leap-chunk-controls--footer{justify-content:center; margin-top:16px;}
-.leap-chunk-nav{appearance:none; width:34px; height:34px; border-radius:999px; border:1px solid rgba(56,189,248,.45); background:transparent; color:var(--fg); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; cursor:pointer; transition:border-color .18s ease, background .18s ease, color .18s ease;}
+.leap-chunk-nav{appearance:none; width:32px; height:32px; border-radius:999px; border:1px solid rgba(56,189,248,.45); background:transparent; color:var(--fg); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; cursor:pointer; transition:border-color .18s ease, background .18s ease, color .18s ease;}
 .leap-chunk-nav:hover:not(:disabled){border-color:rgba(56,189,248,.75); background:rgba(56,189,248,.2); color:#e0f2fe;}
 .leap-chunk-nav:disabled{opacity:.35; cursor:default;}
 .leap-chunk-track{display:flex; align-items:center; gap:8px; overflow-x:auto; padding:2px 4px; scrollbar-width:none; -ms-overflow-style:none; touch-action:pan-x; -webkit-overflow-scrolling:touch; flex:1 1 auto; min-width:0;}
@@ -268,9 +268,10 @@
   .review-grade{ padding:14px 0; font-size:15px; }
   .leap-setup-main{padding:28px 16px;}
   .leap-control-card{padding:18px;}
-  .leap-range-stack{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+  .leap-range-stack{grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;}
   .leap-range-option{min-width:0;}
-  .leap-range-pill{width:100%;}
+  .leap-range-pill{width:100%; padding:8px 12px; gap:6px;}
+  .leap-range-input{flex:0 0 82px; max-width:82px; font-size:15px;}
   .leap-range-line{gap:8px;}
   .leap-order-row{flex-direction:column; align-items:flex-start; gap:8px;}
   .leap-order-pills{width:100%;}
@@ -287,7 +288,7 @@
   .leap-preview-filter{flex:1; padding:6px 10px; font-size:12px;}
   .leap-chunk-controls{flex-direction:row; align-items:center; gap:6px; padding:8px;}
   .leap-chunk-controls--footer{margin-top:20px;}
-  .leap-chunk-nav{width:34px; height:34px;}
+  .leap-chunk-nav{width:30px; height:30px;}
   .leap-chunk-track{flex:1 1 auto; width:auto;}
   .leap-chunk-active{text-align:right;}
   .leap-preview-list{gap:6px;}
