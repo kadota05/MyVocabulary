@@ -16,6 +16,7 @@ type LeapState = {
   current?: LeapWord
   remaining: LeapWord[]
   retry: LeapWord[]
+  sessionWords: LeapWord[]
   order: LeapOrder
   error: string | null
   catalog: LeapWord[]
@@ -42,6 +43,7 @@ export const useLeapStore = create<LeapState>((set, get) => ({
   current: undefined,
   remaining: [],
   retry: [],
+  sessionWords: [],
   order: 'random',
   error: null,
   catalog: [],
@@ -91,12 +93,13 @@ export const useLeapStore = create<LeapState>((set, get) => ({
         current: next,
         remaining,
         retry,
+        sessionWords: words,
         loading: false
       })
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : '出題の準備に失敗しました。'
-      set({ loading: false, error: message, ready: false, current: undefined, remaining: [], retry: [] })
+      set({ loading: false, error: message, ready: false, current: undefined, remaining: [], retry: [], sessionWords: [] })
       return { success: false, error: message }
     }
   },
@@ -119,9 +122,11 @@ export const useLeapStore = create<LeapState>((set, get) => ({
   exitSession: () => {
     set({
       ready: false,
+      config: null,
       current: undefined,
       remaining: [],
       retry: [],
+      sessionWords: [],
       order: 'random'
     })
   },

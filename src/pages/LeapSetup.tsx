@@ -16,7 +16,8 @@ export default function LeapSetup() {
     clearError,
     config,
     catalog,
-    catalogLoading
+    catalogLoading,
+    exitSession
   } = useLeapStore(state => ({
     totalAvailable: state.totalAvailable,
     initMetadata: state.initMetadata,
@@ -26,7 +27,8 @@ export default function LeapSetup() {
     clearError: state.clearError,
     config: state.config,
     catalog: state.catalog,
-    catalogLoading: state.catalogLoading
+    catalogLoading: state.catalogLoading,
+    exitSession: state.exitSession
   }))
 
   const [startIndex, setStartIndex] = useState('')
@@ -40,6 +42,19 @@ export default function LeapSetup() {
   const [hasAppliedSelection, setHasAppliedSelection] = useState(false)
   const [previewMode, setPreviewMode] = useState<'all' | 'selected'>('all')
   const [chunkIndex, setChunkIndex] = useState(0)
+
+  useEffect(() => {
+    exitSession()
+    setStartIndex('')
+    setEndIndex('')
+    setAddWrongToWordlist(false)
+    setOrder('random')
+    setSelectedHeadings(new Set())
+    setPendingSyncRange(true)
+    setHasAppliedSelection(false)
+    setPreviewMode('all')
+    setChunkIndex(0)
+  }, [exitSession])
 
   useEffect(() => {
     void initMetadata()

@@ -130,8 +130,8 @@
 
 .leap-header .home-header__brand{text-transform:none; letter-spacing:0.08em;}
 .leap-setup-main{flex:1; display:flex; justify-content:center; padding:40px clamp(24px, 6vw, 120px);}
-.leap-setup-grid{width:100%; max-width:1080px; display:flex; gap:28px; align-items:flex-start;}
-.leap-setup-form{width:min(420px, 100%); display:flex; flex-direction:column; gap:20px;}
+.leap-setup-grid{width:100%; max-width:1080px; display:flex; gap:28px; align-items:flex-start; justify-content:center; margin:0 auto;}
+.leap-setup-form{flex:0 0 420px; width:100%; max-width:420px; display:flex; flex-direction:column; gap:20px;}
 .leap-control-card{display:flex; flex-direction:column; gap:20px; padding:24px; background:rgba(21,31,55,.94); border:1px solid rgba(56,189,248,.18);}
 .leap-control-title{margin:0; font-size:18px; font-weight:700; letter-spacing:0.06em; color:var(--fg);}
 .leap-control-pill{font-size:13px; letter-spacing:0.04em; color:var(--muted); background:rgba(15,23,42,.75); border:1px solid rgba(51,65,85,.55); border-radius:999px; padding:6px 12px; white-space:nowrap;}
@@ -164,7 +164,7 @@
 .leap-actions{display:flex; align-items:center; gap:16px; margin-top:8px;}
 .leap-checkbox-inline{display:flex; align-items:center; gap:8px; font-weight:600; letter-spacing:0.02em;}
 .leap-checkbox-inline input{width:18px; height:18px;}
-.leap-preview-panel{flex:1; display:flex; flex-direction:column; gap:20px; padding:24px; min-height:360px; background:rgba(10,16,30,.94); border:1px solid rgba(15,118,110,.22);}
+.leap-preview-panel{flex:0 1 640px; width:100%; display:flex; flex-direction:column; gap:20px; padding:24px; min-height:360px; background:rgba(10,16,30,.94); border:1px solid rgba(15,118,110,.22);}
 .leap-preview-header{display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;}
 .leap-preview-body{flex:1; display:flex; flex-direction:column; gap:10px; overflow:auto; padding-right:6px;}
 .leap-preview-list{display:flex; flex-direction:column; gap:10px;}
@@ -191,12 +191,12 @@
 .leap-preview-filter:hover{border-color:rgba(56,189,248,.6); color:#e0f2fe;}
 .leap-preview-filter.active{border-color:rgba(56,189,248,.85); background:rgba(56,189,248,.22); color:#e0f2fe; box-shadow:0 12px 20px rgba(14,165,233,.22);}
 .leap-preview-filter:disabled{opacity:.4; cursor:default;}
-.leap-chunk-controls{display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(51,65,85,.5); background:rgba(15,23,42,.65);}
+.leap-chunk-controls{display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(51,65,85,.5); background:rgba(15,23,42,.65); flex-wrap:nowrap; width:100%;}
 .leap-chunk-controls--footer{justify-content:center; margin-top:16px;}
-.leap-chunk-nav{appearance:none; width:30px; height:30px; border-radius:999px; border:1px solid rgba(56,189,248,.45); background:transparent; color:var(--fg); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; cursor:pointer; transition:border-color .18s ease, background .18s ease, color .18s ease;}
+.leap-chunk-nav{appearance:none; width:34px; height:34px; border-radius:999px; border:1px solid rgba(56,189,248,.45); background:transparent; color:var(--fg); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; cursor:pointer; transition:border-color .18s ease, background .18s ease, color .18s ease;}
 .leap-chunk-nav:hover:not(:disabled){border-color:rgba(56,189,248,.75); background:rgba(56,189,248,.2); color:#e0f2fe;}
 .leap-chunk-nav:disabled{opacity:.35; cursor:default;}
-.leap-chunk-track{display:flex; align-items:center; gap:8px; overflow-x:auto; padding:2px 4px; scrollbar-width:none; -ms-overflow-style:none; touch-action:pan-x; -webkit-overflow-scrolling:touch;}
+.leap-chunk-track{display:flex; align-items:center; gap:8px; overflow-x:auto; padding:2px 4px; scrollbar-width:none; -ms-overflow-style:none; touch-action:pan-x; -webkit-overflow-scrolling:touch; flex:1 1 auto; min-width:0;}
 .leap-chunk-track::-webkit-scrollbar{display:none;}
 .leap-chunk-pill{appearance:none; border-radius:999px; border:1px solid rgba(51,65,85,.6); background:rgba(17,24,39,.9); color:var(--muted); padding:4px 12px; font-size:12px; letter-spacing:0.05em; cursor:pointer; transition:border-color .18s ease, background .18s ease, color .18s ease;}
 .leap-chunk-pill:hover{border-color:rgba(56,189,248,.6); color:#e0f2fe;}
@@ -217,11 +217,13 @@
 .leap-session-stats{display:flex; gap:18px; font-size:14px; color:var(--muted); flex-wrap:wrap;}
 .leap-finished-card{display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center;}
 .leap-finished-title{font-size:20px; font-weight:700; letter-spacing:0.04em;}
+.leap-finished-actions{display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-top:4px;}
+.leap-finished-actions .btn{min-width:160px;}
 
 @media (max-width:960px){
-  .leap-setup-grid{flex-direction:column; gap:24px;}
-  .leap-setup-form{width:100%;}
-  .leap-preview-panel{width:100%;}
+  .leap-setup-grid{flex-direction:column; gap:24px; align-items:stretch; justify-content:flex-start;}
+  .leap-setup-form{width:100%; max-width:100%; flex:1 1 auto;}
+  .leap-preview-panel{width:100%; flex:1 1 auto;}
 }
 
 @media (max-width:480px){
@@ -266,7 +268,7 @@
   .review-grade{ padding:14px 0; font-size:15px; }
   .leap-setup-main{padding:28px 16px;}
   .leap-control-card{padding:18px;}
-  .leap-range-stack{grid-template-columns:1fr; gap:10px;}
+  .leap-range-stack{grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
   .leap-range-option{min-width:0;}
   .leap-range-pill{width:100%;}
   .leap-range-line{gap:8px;}
@@ -283,10 +285,10 @@
   .leap-preview-body{padding-right:2px; gap:8px;}
   .leap-preview-filters{width:100%; justify-content:space-between; gap:6px;}
   .leap-preview-filter{flex:1; padding:6px 10px; font-size:12px;}
-  .leap-chunk-controls{flex-direction:column; align-items:stretch; gap:6px; padding:8px;}
+  .leap-chunk-controls{flex-direction:row; align-items:center; gap:6px; padding:8px;}
   .leap-chunk-controls--footer{margin-top:20px;}
-  .leap-chunk-nav{width:100%; height:34px;}
-  .leap-chunk-track{width:100%;}
+  .leap-chunk-nav{width:34px; height:34px;}
+  .leap-chunk-track{flex:1 1 auto; width:auto;}
   .leap-chunk-active{text-align:right;}
   .leap-preview-list{gap:6px;}
   .leap-preview-card{padding:10px 12px; border-radius:10px; gap:6px;}
@@ -298,5 +300,7 @@
   .leap-preview-card__details{gap:3px;}
   .leap-preview-card__example{font-size:11px;}
   .leap-preview-card__source{font-size:10px;}
+  .leap-finished-actions{flex-direction:column; width:100%;}
+  .leap-finished-actions .btn{width:100%; min-width:0;}
 }
 

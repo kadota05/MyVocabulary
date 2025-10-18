@@ -13,7 +13,9 @@ export default function LeapSession() {
     retry,
     markKnown,
     markWrong,
-    exitSession
+    exitSession,
+    startSession,
+    sessionWords
   } = useLeapStore(state => ({
     config: state.config,
     current: state.current,
@@ -21,10 +23,13 @@ export default function LeapSession() {
     retry: state.retry,
     markKnown: state.markKnown,
     markWrong: state.markWrong,
-    exitSession: state.exitSession
+    exitSession: state.exitSession,
+    startSession: state.startSession,
+    sessionWords: state.sessionWords
   }))
   const [busy, setBusy] = useState(false)
   const [flipped, setFlipped] = useState(false)
+  const [restartBusy, setRestartBusy] = useState(false)
 
   useEffect(() => {
     if (!config) {
@@ -119,6 +124,26 @@ export default function LeapSession() {
     }
   }
 
+  async function handleRestart() {
+    if (restartBusy) return
+    if (!config) {
+      nav('/leap')
+      return
+    }
+    setRestartBusy(true)
+    try {
+      const override = sessionWords.length ? sessionWords : undefined
+      const result = await startSession(config, override)
+      if (!result.success) {
+        if (result.error) toast(result.error)
+        exitSession()
+        nav('/leap')
+      }
+    } finally {
+      setRestartBusy(false)
+    }
+  }
+
   const sessionFinished = !current && remaining.length === 0 && retry.length === 0
 
   return (
@@ -144,16 +169,38 @@ export default function LeapSession() {
           <div className='card center leap-finished-card'>
             <div className='leap-finished-title'>セッション完了！</div>
             <p className='muted'>選択した範囲の学習が終了しました。</p>
-            <button
-              type='button'
-              className='btn btn-primary'
-              onClick={() => {
-                exitSession()
-                nav('/leap')
-              }}
-            >
-              設定に戻る
-            </button>
+            <div className='leap-finished-actions'>
+              <button
+                type='button'
+                className='btn btn-primary'
+                onClick={handleRestart}
+                disabled={restartBusy || sessionWords.length === 0}
+              >
+                もう一度繰り返す
+              </button>
+              <button
+                type='button'
+                className='btn'
+                onClick={() => {
+                  exitSession()
+                  nav('/leap')
+                }}
+                disabled={restartBusy}
+              >
+                出題設定に戻る
+              </button>
+              <button
+                type='button'
+                className='btn'
+                onClick={() => {
+                  exitSession()
+                  nav('/')
+                }}
+                disabled={restartBusy}
+              >
+                ホームに戻る
+              </button>
+            </div>
           </div>
         ) : (
           cardContent
