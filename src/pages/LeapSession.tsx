@@ -251,8 +251,6 @@ export default function LeapSession() {
           </div>
         ) : (
           <div className='review-face back'>
-            <div className='review-meaning'>{current.meaning || '-'}</div>
-            {current.example && <div className='review-extra'>{current.example}</div>}
             {current.source && (
               <div className='review-extra'>
                 Source:{' '}
@@ -270,6 +268,8 @@ export default function LeapSession() {
                 )}
               </div>
             )}
+            {current.example && <div className='review-extra'>{current.example}</div>}
+            <div className='review-meaning'>{current.meaning || '-'}</div>
           </div>
         )}
       </div>
@@ -291,11 +291,13 @@ export default function LeapSession() {
 
   async function handleKnown() {
     if (busy || !current) return
+    setFlipped(false)
     markKnown()
   }
 
   async function handleWrong() {
     if (busy || !current) return
+    setFlipped(false)
     setBusy(true)
     try {
       const wrongWord = await markWrong()
@@ -439,7 +441,7 @@ export default function LeapSession() {
                     ))}
                   </div>
                 </label>
-                {voiceOptions.length > 1 && (
+                {/* {voiceOptions.length > 1 && (
                   <label className='muted' style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <span>Voice</span>
                     <select
@@ -454,7 +456,7 @@ export default function LeapSession() {
                       ))}
                     </select>
                   </label>
-                )}
+                )} */}
               </div>
             )}
           </div>
