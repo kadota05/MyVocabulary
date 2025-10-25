@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ChangeEvent,
@@ -62,7 +63,7 @@ export default function Review() {
     }
   }, [startToday])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setFlipped(false)
   }, [current?.id])
 
@@ -221,9 +222,6 @@ export default function Review() {
           </div>
         ) : (
           <div className='review-face back' style={{ gap:16 }}>
-            <div className='review-extra muted' style={{ fontSize:14, letterSpacing:'0.08em', textTransform:'uppercase' }}>
-              Since: {current.nextDueDate}
-            </div>
             <div className='review-extra' style={{ display:'flex', flexDirection:'column', gap:4 }}>
               <span className='muted' style={{ fontSize:12, letterSpacing:'0.12em', textTransform:'uppercase' }}>Source</span>
               {current.source
@@ -272,18 +270,30 @@ export default function Review() {
   const remainingCount = remaining.length + (current && currentSide === 'left' ? 1 : 0)
   const retryCount = again.length + (current && currentSide === 'right' ? 1 : 0)
 
+  const waitForFlipReset = useCallback(async () => {
+    if (!flipped) return
+    setFlipped(false)
+    await new Promise<void>(resolve => {
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => resolve())
+      } else {
+        setTimeout(resolve, 0)
+      }
+    })
+  }, [flipped])
+
   const requestGrade = useCallback(
     async (value: Grade) => {
       if (!current || busy) return
-      setFlipped(false)
       setBusy(true)
       try {
+        await waitForFlipReset()
         await grade(value)
       } finally {
         setBusy(false)
       }
     },
-    [busy, current, grade]
+    [busy, current, grade, waitForFlipReset]
   )
 
   const handleRestart = useCallback(async () => {
@@ -299,7 +309,7 @@ export default function Review() {
   }, [restartBusy, startToday])
 
   return (
-    <div className='home-screen leap-session-screen review-session-screen'>
+    <div className='home-screen leap-session-screen review-session-screen session-card-layout'>
       <header className='home-header leap-header'>
         <div className='home-header__brand'>Review Session</div>
         <div className='home-header__actions'>

@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, MouseEvent, PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, KeyboardEvent, MouseEvent, PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
 import { useLeapStore } from '~/state/leap'
@@ -48,6 +48,10 @@ export default function LeapSetup() {
   const [hasAppliedSelection, setHasAppliedSelection] = useState(false)
   const [previewMode, setPreviewMode] = useState<'all' | 'selected'>('all')
   const [chunkIndex, setChunkIndex] = useState(0)
+  const chunkTrackRefs = useRef<{ main: HTMLDivElement | null; footer: HTMLDivElement | null }>({
+    main: null,
+    footer: null
+  })
   const defaultFormRef = useRef<FormDefaults>({
     startIndex: '',
     endIndex: '',
@@ -222,8 +226,22 @@ export default function LeapSetup() {
       : 'この範囲の単語が見つかりません。'
   const isStartFilled = startIndex.trim().length > 0
   const isEndFilled = endIndex.trim().length > 0
+  const scrollActiveChunkIntoView = useCallback(
+    (track: HTMLDivElement | null, behavior: 'auto' | 'smooth' = 'smooth') => {
+      if (!track) return
+      const pills = track.querySelectorAll<HTMLButtonElement>('.leap-chunk-pill')
+      if (!pills.length) return
+      const target = pills[Math.min(chunkIndex, pills.length - 1)]
+      if (!target) return
+      const paddingLeft = Number.parseFloat(getComputedStyle(track).paddingLeft) || 0
+      const left = Math.max(0, target.offsetLeft - paddingLeft)
+      track.scrollTo({ left, behavior })
+    },
+    [chunkIndex]
+  )
   const renderChunkControls = (variant?: 'footer') => {
     if (!showChunkControls) return null
+    const trackKey: 'main' | 'footer' = variant === 'footer' ? 'footer' : 'main'
     return (
       <div className={`leap-chunk-controls${variant === 'footer' ? ' leap-chunk-controls--footer' : ''}`}>
         <button
@@ -235,7 +253,14 @@ export default function LeapSetup() {
         >
           &lt;
         </button>
-        <div className='leap-chunk-track' role='radiogroup' aria-label='表示範囲'>
+        <div
+          className='leap-chunk-track'
+          role='radiogroup'
+          aria-label='表示範囲'
+          ref={node => {
+            chunkTrackRefs.current[trackKey] = node
+          }}
+        >
           {chunkRanges.map((range, index) => {
             const label = `${range.start.toLocaleString('ja-JP')}~${range.end.toLocaleString('ja-JP')}`
             const active = index === chunkIndex
@@ -265,6 +290,12 @@ export default function LeapSetup() {
       </div>
     )
   }
+
+  useEffect(() => {
+    if (!showChunkControls) return
+    scrollActiveChunkIntoView(chunkTrackRefs.current.main)
+    scrollActiveChunkIntoView(chunkTrackRefs.current.footer)
+  }, [showChunkControls, chunkRanges.length, scrollActiveChunkIntoView])
 
   function applySelectionFromRange() {
     const base = new Set(rangeHeadings)

@@ -228,15 +228,14 @@ export default function Home(){
                 <span className='hero-meta__detail'><span className='hero-number'>{learnedCountFormatted}</span> Mastered</span>
               </div>
             </div>
-            <div className='hero-orb hero-orb--main' aria-hidden='true'>
-              <span className='hero-label'>Start.</span>
-            </div>
             <button
               type='button'
-              className='hero-cta-hit'
+              className='hero-orb hero-orb--main'
               onClick={()=> nav('/review')}
               aria-label="Start today's review"
-            />
+            >
+              <span className='hero-label'>Start.</span>
+            </button>
           </div>
         </section>
       </main>
