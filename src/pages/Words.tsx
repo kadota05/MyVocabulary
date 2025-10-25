@@ -93,29 +93,29 @@ export default function Words(){
 
   return (
     <div className='home-screen words-screen'>
-      <header className='home-header words-header-bar'>
-        <div className='words-header__row'>
-          <div className='home-header__brand'>Word Library</div>
-          <div className='home-header__actions'>
-            <button className='icon-button' onClick={()=> nav('/')} aria-label='Back to home'>
-              <BackIcon />
-            </button>
-          </div>
-        </div>
-        <div className='words-header__search'>
-          <input
-            className='input'
-            placeholder='Search (phrase / meaning / tips / source)'
-            value={q}
-            onChange={e=> setQ(e.target.value)}
-          />
-          <div className='words-header__metrics'>
-            Total {items.length} • Showing {filtered.length}
-          </div>
+      <header className='home-header leap-header'>
+        <div className='home-header__brand'>Word Library</div>
+        <div className='home-header__actions'>
+          <button className='icon-button' onClick={()=> nav('/')} aria-label='Back to home'>
+            <CloseIcon />
+          </button>
         </div>
       </header>
 
       <main className='words-main'>
+        <div className='words-toolbar'>
+          <div className='words-header__search'>
+            <input
+              className='input'
+              placeholder='Search (phrase / meaning / tips / source)'
+              value={q}
+              onChange={e=> setQ(e.target.value)}
+            />
+            <div className='words-header__metrics'>
+              Total {items.length} • Showing {filtered.length}
+            </div>
+          </div>
+        </div>
         {loading ? (
           <div className='card center' style={{ minHeight:120 }}>Loading...</div>
         ) : filtered.length === 0 ? (
@@ -228,11 +228,11 @@ export default function Words(){
   )
 }
 
-function BackIcon(){
+function CloseIcon(){
   return (
     <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
-      <polyline points='15 18 9 12 15 6' />
-      <line x1='9' y1='12' x2='21' y2='12' />
+      <line x1='18' y1='6' x2='6' y2='18' />
+      <line x1='6' y1='6' x2='18' y2='18' />
     </svg>
   )
 }
