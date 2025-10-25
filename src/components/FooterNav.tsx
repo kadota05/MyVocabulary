@@ -31,6 +31,8 @@ export default function FooterNav() {
         <NavLink
           key={item.to}
           to={item.to}
+          aria-label={item.label}
+          title={item.label}
           className={({ isActive }) =>
             ['footer-nav__item', isActive ? 'footer-nav__item--active' : ''].filter(Boolean).join(' ')
           }
