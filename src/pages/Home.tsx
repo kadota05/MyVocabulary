@@ -3,17 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
 import { addWord, getWordSummary, importRows, type WordSummary } from '~/db/sqlite'
 import { ensureGoogleLoaded, fetchFirstTableRows } from '~/lib/google'
+import { useImportSettings } from '~/state/importSettings'
 
 type Phase = 'idle' | 'auth' | 'fetch' | 'parse' | 'insert'
 
 export default function Home(){
   const nav = useNavigate()
-  const [docId, setDocId] = useState(localStorage.getItem('gdoc_id') || '')
-  const [clientId, setClientId] = useState(localStorage.getItem('gclient_id') || '')
+  const { clientId, docId } = useImportSettings()
   const [busy, setBusy] = useState(false)
   const [phase, setPhase] = useState<Phase>('idle')
   const [progress, setProgress] = useState<{done:number; total:number}>({ done:0, total:0 })
-  const [openSettings, setOpenSettings] = useState(false)
   const [cancelled, setCancelled] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
   const [newWordOpen, setNewWordOpen] = useState(false)
@@ -23,14 +22,10 @@ export default function Home(){
   const [summary, setSummary] = useState<WordSummary>({ total:0, learning:0, learned:0, firstCreatedAt: null })
   const phraseInputRef = useRef<HTMLInputElement|null>(null)
 
-  useEffect(()=>{ localStorage.setItem('gdoc_id', docId) },[docId])
-  useEffect(()=>{ localStorage.setItem('gclient_id', clientId) },[clientId])
-
   useEffect(()=>{
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape'){
         setFabOpen(false)
-        setOpenSettings(false)
         if (!newWordBusy){
           setNewWordOpen(false)
           resetNewWord()
@@ -210,16 +205,6 @@ export default function Home(){
           <button
             type='button'
             className='icon-button'
-            onClick={()=> setOpenSettings(o=>!o)}
-            aria-expanded={openSettings}
-            aria-controls='settings-panel'
-            aria-label='Open settings'
-          >
-            <GearIcon />
-          </button>
-          <button
-            type='button'
-            className='icon-button'
             onClick={()=> nav('/words')}
             aria-label='Go to word library'
           >
@@ -291,30 +276,6 @@ export default function Home(){
           <span aria-hidden='true'>+</span>
         </button>
       </div>
-
-      {openSettings && (
-        <Modal title='Import Setting' onClose={()=> setOpenSettings(false)}>
-          <div className='col' style={{ gap:12 }} id='settings-panel'>
-            <label className='label'>Google OAuth Client ID</label>
-            <input
-              className='input'
-              value={clientId}
-              onChange={e=>setClientId(e.target.value)}
-              placeholder='xxxxxxxx.apps.googleusercontent.com'
-            />
-            <label className='label'>Google Document ID</label>
-            <input
-              className='input'
-              value={docId}
-              onChange={e=>setDocId(e.target.value)}
-              placeholder='1Abc... (ID from Docs URL)'
-            />
-            <div className='modal-actions'>
-              <button type='button' className='btn' onClick={()=> setOpenSettings(false)}>Close</button>
-            </div>
-          </div>
-        </Modal>
-      )}
 
       {newWordOpen && (
         <Modal title='Add New Card' onClose={closeNewWord}>
@@ -410,15 +371,6 @@ function ImportProgress({ phase, progress, onCancel }: { phase: Phase; progress:
         </div>
       </div>
     </div>
-  )
-}
-
-function GearIcon(){
-  return (
-    <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
-      <path d='M10.325 4.317a1 1 0 0 1 1.35-.436l.12.062a2 2 0 0 0 1.87 0l.12-.062a1 1 0 0 1 1.35.435l.06.104a2 2 0 0 0 1.74 1.007h.138a1 1 0 0 1 .998.915l.01.125a2 2 0 0 0 1.003 1.59l.102.055a1 1 0 0 1 .436 1.35l-.061.12a2 2 0 0 0 0 1.87l.062.12a1 1 0 0 1-.435 1.35l-.104.06a2 2 0 0 0-1.007 1.74v.138a1 1 0 0 1-.915.998l-.125.01a2 2 0 0 0-1.59 1.003l-.055.102a1 1 0 0 1-1.35.436l-.12-.061a2 2 0 0 0-1.87 0l-.12.062a1 1 0 0 1-1.35-.435l-.06-.104a2 2 0 0 0-1.74-1.007h-.138a1 1 0 0 1-.998-.915l-.01-.125a2 2 0 0 0-1.003-1.59l-.102-.055a1 1 0 0 1-.436-1.35l.061-.12a2 2 0 0 0 0-1.87l-.062-.12a1 1 0 0 1 .435-1.35l.104-.06a2 2 0 0 0 1.007-1.74v-.138a1 1 0 0 1 .915-.998l.125-.01a2 2 0 0 0 1.59-1.003z' />
-      <circle cx='12' cy='12' r='3' />
-    </svg>
   )
 }
 
