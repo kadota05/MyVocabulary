@@ -7,7 +7,9 @@ const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60
 const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, index) => START_HOUR + index)
 const SNAP_MINUTES = 15
 const MIN_EVENT_DURATION = 30
-const LONG_PRESS_DELAY = 220
+const LONG_PRESS_DELAY_MOUSE = 220
+const LONG_PRESS_DELAY_TOUCH = 2000
+const LONG_PRESS_CANCEL_DISTANCE = 14
 const DAYS_OF_WEEK_JP = ['日', '月', '火', '水', '木', '金', '土']
 
 type TimelineEvent = {
@@ -119,6 +121,11 @@ export default function Calendar() {
   const [isCreating, setIsCreating] = useState(false)
   const timelineRef = useRef<HTMLDivElement | null>(null)
   const pressTimerRef = useRef<number | null>(null)
+  const pressOriginRef = useRef<{
+    pointerId: number
+    clientY: number
+    pointerType: React.PointerEvent['pointerType']
+  } | null>(null)
   const dragState = useRef<{ pointerId: number; start: number } | null>(null)
 
   const now = new Date()
@@ -133,6 +140,24 @@ export default function Calendar() {
       if (pressTimerRef.current) {
         window.clearTimeout(pressTimerRef.current)
       }
+    }
+  }, [])
+
+  useEffect(() => {
+    const themeMeta = document.querySelector('meta[name="theme-color"]')
+    const previousMeta = themeMeta?.getAttribute('content') ?? null
+    const previousBodyBg = document.body.style.backgroundColor
+    themeMeta?.setAttribute('content', '#020617')
+    document.body.style.backgroundColor = '#020617'
+    return () => {
+      if (themeMeta) {
+        if (previousMeta) {
+          themeMeta.setAttribute('content', previousMeta)
+        } else {
+          themeMeta.removeAttribute('content')
+        }
+      }
+      document.body.style.backgroundColor = previousBodyBg
     }
   }, [])
 
@@ -226,6 +251,7 @@ export default function Calendar() {
       window.clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
+    pressOriginRef.current = null
   }
 
   const getRelativeMinutes = (clientY: number) => {
@@ -238,6 +264,7 @@ export default function Calendar() {
 
   const startDrag = (minutes: number, target: HTMLDivElement, pointerId: number) => {
     const safeStart = clampStart(snapStart(minutes))
+    pressOriginRef.current = null
     dragState.current = { pointerId, start: safeStart }
     setDraftEvent({
       id: 'draft-event',
@@ -259,13 +286,31 @@ export default function Calendar() {
     if (minutes == null) return
     const target = event.currentTarget
     const pointerId = event.pointerId
+    pressOriginRef.current = { pointerId, clientY: event.clientY, pointerType: event.pointerType }
+    const delay =
+      event.pointerType === 'touch' || event.pointerType === 'pen'
+        ? LONG_PRESS_DELAY_TOUCH
+        : LONG_PRESS_DELAY_MOUSE
     pressTimerRef.current = window.setTimeout(() => {
       startDrag(minutes, target, pointerId)
-    }, LONG_PRESS_DELAY)
+      pressTimerRef.current = null
+    }, delay)
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragState.current || !isCreating) return
+    if (!dragState.current || !isCreating) {
+      const origin = pressOriginRef.current
+      if (
+        origin &&
+        origin.pointerId === event.pointerId &&
+        (origin.pointerType === 'touch' || origin.pointerType === 'pen')
+      ) {
+        if (Math.abs(event.clientY - origin.clientY) > LONG_PRESS_CANCEL_DISTANCE) {
+          clearPressTimer()
+        }
+      }
+      return
+    }
     const minutes = getRelativeMinutes(event.clientY)
     if (minutes == null) return
     const snappedEnd = snapEnd(minutes)
@@ -313,18 +358,18 @@ export default function Calendar() {
             onClick={showComingSoon}
             aria-label='前の日へ'
           >
-            <ChevronLeft size={22} strokeWidth={1.6} aria-hidden='true' />
+            <ChevronLeft size={26} strokeWidth={1.6} aria-hidden='true' />
             <span>{toolbarMonthLabel}</span>
           </button>
           <div className='calendar-day-toolbar__actions'>
             <button className='calendar-day-toolbar__action' type='button' aria-label='今日に移動' onClick={showComingSoon}>
-              <Grid2x2 size={20} strokeWidth={1.6} aria-hidden='true' />
+              <Grid2x2 size={24} strokeWidth={1.6} aria-hidden='true' />
             </button>
             <button className='calendar-day-toolbar__action' type='button' aria-label='予定を検索' onClick={showComingSoon}>
-              <Search size={20} strokeWidth={1.6} aria-hidden='true' />
+              <Search size={24} strokeWidth={1.6} aria-hidden='true' />
             </button>
             <button className='calendar-day-toolbar__action is-accent' type='button' aria-label='予定を追加' onClick={showComingSoon}>
-              <Plus size={20} strokeWidth={1.6} aria-hidden='true' />
+              <Plus size={24} strokeWidth={1.6} aria-hidden='true' />
             </button>
           </div>
         </header>
