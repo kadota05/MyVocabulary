@@ -71,9 +71,8 @@ const minutesToLabel = (minutes: number) => {
 const minutesToTime24 = (minutes: number) => {
   const hours24 = Math.floor(minutes / 60);
   const minutesPart = minutes % 60;
-  const paddedHours = hours24.toString().padStart(2, "0");
   const paddedMinutes = minutesPart.toString().padStart(2, "0");
-  return `${paddedHours}:${paddedMinutes}`;
+  return `${hours24}:${paddedMinutes}`;
 };
 
 const formatHourLabel = (hour: number) => `${hour}:00`;
