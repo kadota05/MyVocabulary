@@ -456,6 +456,16 @@ function ensureCalendarSchema(database: Database | null){
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(dateKey, startMinutes);
   `)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS calendar_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      summary TEXT,
+      activities TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+  `)
 }
 
 function normalizeCalendarColor(color: string | null | undefined): CalendarEventColor{
@@ -597,6 +607,97 @@ export async function deleteCalendarEvent(id: string): Promise<void> {
   d.exec('BEGIN;')
   try {
     d.run('DELETE FROM calendar_events WHERE id = ?', [id])
+    d.exec('COMMIT;')
+  } catch (error) {
+    try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+    throw error
+  }
+  await persist()
+}
+
+// Calendar Templates
+export type CalendarTemplateRow = {
+  id: string
+  name: string
+  summary: string | null
+  activities: string // JSON string
+  createdAt: string
+  updatedAt: string
+}
+
+export type CalendarTemplateInsert = {
+  name: string
+  summary?: string
+  activities: Array<{
+    id: string
+    label: string
+    startTime: string
+    endTime: string
+    enabled: boolean
+  }>
+}
+
+export async function getCalendarTemplates(): Promise<CalendarTemplateRow[]> {
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  const stmt = d.prepare(`
+    SELECT id, name, summary, activities, createdAt, updatedAt 
+    FROM calendar_templates 
+    ORDER BY createdAt DESC
+  `)
+  const templates: CalendarTemplateRow[] = []
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as {
+      id: string
+      name: string
+      summary: string | null
+      activities: string
+      createdAt: string
+      updatedAt: string
+    }
+    templates.push(row)
+  }
+  stmt.free()
+  return templates
+}
+
+export async function insertCalendarTemplate(entry: CalendarTemplateInsert): Promise<CalendarTemplateRow> {
+  const name = entry.name.trim()
+  if (!name) throw new Error('CALENDAR_TEMPLATE_MISSING_NAME')
+  const summary = entry.summary?.trim() || null
+  const activitiesJson = JSON.stringify(entry.activities)
+  const nowIso = new Date().toISOString()
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  const id = uuid()
+  d.exec('BEGIN;')
+  try {
+    d.run(
+      'INSERT INTO calendar_templates (id, name, summary, activities, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, name, summary, activitiesJson, nowIso, nowIso]
+    )
+    d.exec('COMMIT;')
+  } catch (error) {
+    try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+    throw error
+  }
+  await persist()
+  return {
+    id,
+    name,
+    summary,
+    activities: activitiesJson,
+    createdAt: nowIso,
+    updatedAt: nowIso
+  }
+}
+
+export async function deleteCalendarTemplate(id: string): Promise<void> {
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  d.exec('BEGIN;')
+  try {
+    d.run('DELETE FROM calendar_templates WHERE id = ?', [id])
     d.exec('COMMIT;')
   } catch (error) {
     try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }

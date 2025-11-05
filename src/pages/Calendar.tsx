@@ -79,13 +79,7 @@ const formatHourLabel = (hour: number) => `${hour}:00`;
 
 const clampMinutes = (value: number) =>
   Math.min(Math.max(value, 0), TOTAL_MINUTES);
-// 開始時刻は23:50（1430分）まで許可。終了時刻が24:00を超えないようにする
-const clampStart = (value: number) => {
-  const clamped = clampMinutes(value);
-  // 23:50（1430分）まで許可
-  const maxStart = 1430;
-  return Math.min(clamped, maxStart);
-};
+const clampStart = (value: number) => clampMinutes(value);
 const snapStart = (value: number) =>
   Math.floor(value / SNAP_MINUTES) * SNAP_MINUTES;
 const sameDay = (a: Date, b: Date) =>
@@ -438,14 +432,25 @@ export default function Calendar() {
     if (minutes == null) return;
     const rawStart = minutes - activeDrag.offset;
     const snappedStart = snapStart(rawStart);
-    // 開始時刻を23:50（1430分）まで制限
-    const adjustedStart = clampStart(snappedStart);
     const duration = activeDrag.duration;
-    // 終了時刻を計算（24:00を超えないように）
+    
+    // 開始時刻を23:50（1430分）まで許可
+    // 終了時刻が24:00を超えないように開始時刻を調整
+    const maxStart = 1430; // 23:50 = 1430分
+    let adjustedStart = Math.max(0, Math.min(snappedStart, maxStart));
+    
+    // 終了時刻が24:00（1440分）を超えないように開始時刻を再調整
     const proposedEnd = adjustedStart + duration;
+    if (proposedEnd > TOTAL_MINUTES) {
+      adjustedStart = Math.max(0, TOTAL_MINUTES - duration);
+      // 23:50を超えないように制限
+      adjustedStart = Math.min(adjustedStart, maxStart);
+    }
+    
     const adjustedEnd = clampMinutes(
-      Math.max(adjustedStart + MIN_EVENT_DURATION, Math.min(proposedEnd, TOTAL_MINUTES)),
+      Math.max(adjustedStart + MIN_EVENT_DURATION, Math.min(adjustedStart + duration, TOTAL_MINUTES)),
     );
+    
     setDragPreview((prev) => {
       if (
         prev &&
@@ -492,7 +497,13 @@ export default function Calendar() {
     const originalEvent = events.find(e => e.id === activeDrag.eventId);
     if (!originalEvent) return;
     
-    const start = clampStart(preview.start);
+    // 開始時刻を23:50（1430分）まで許可し、終了時刻が24:00を超えないように調整
+    let start = Math.max(0, Math.min(preview.start, 1430));
+    const proposedEnd = start + (preview.end - preview.start);
+    if (proposedEnd > TOTAL_MINUTES) {
+      start = Math.max(0, TOTAL_MINUTES - (preview.end - preview.start));
+      start = Math.min(start, 1430);
+    }
     const end = clampMinutes(Math.max(preview.end, start + MIN_EVENT_DURATION));
     
     // 位置が変わっていない場合は何もしない
@@ -795,7 +806,7 @@ export default function Calendar() {
                 <div
                   className="calendar-time-indicator"
                   style={{
-                    top: `${(clampMinutes(dragPreview.start) / TOTAL_MINUTES) * 100}%`,
+                    top: `${(clampMinutes(dragPreview.start) / TOTAL_MINUTES) * 100 + (60 / TOTAL_MINUTES) * 100 / 2}%`,
                   }}
                 >
                   <span>{minutesToLabel(clampMinutes(dragPreview.start))}</span>
@@ -890,7 +901,7 @@ export default function Calendar() {
               {showCurrentTime && (
                 <div
                   className="calendar-current-time"
-                  style={{ top: `${(nowMinutes / TOTAL_MINUTES) * 100}%` }}
+                  style={{ top: `${(nowMinutes / TOTAL_MINUTES) * 100 + (60 / TOTAL_MINUTES) * 100 / 2}%` }}
                 >
                   <span
                     className="calendar-current-time__dot"
@@ -903,7 +914,12 @@ export default function Calendar() {
                 const end = clampMinutes(
                   Math.max(event.end, start + MIN_EVENT_DURATION),
                 );
-                const top = (start / TOTAL_MINUTES) * 100;
+                // gridの線が各time-labelの中央（var(--calendar-hour-height) / 2）に配置されているため、
+                // 予定カードも同様に、各時間の中央からの位置で計算する
+                // 0時（0分）の位置は gridの線の位置（var(--calendar-hour-height) / 2）に対応
+                // 全体的なオフセットは (1 / 24) * 100 / 2 = 約2.083%（1時間分の半分）
+                const offset = (60 / TOTAL_MINUTES) * 100 / 2; // 1時間分の半分のオフセット
+                const top = (start / TOTAL_MINUTES) * 100 + offset;
                 const height = ((end - start) / TOTAL_MINUTES) * 100;
                 const isExpanded = expandedEventId === event.id;
                 const isDragging = dragPreview?.eventId === event.id;
@@ -917,8 +933,34 @@ export default function Calendar() {
                 const displayMemo = event.memo || "メモを追加";
                 // カードの高さに基づいてタイトルのフォントサイズを動的に計算
                 // heightはパーセンテージ（0-100）、1時間は約4.17%（100/24）
-                // 30分未満（約2%未満）→ 10px、30-60分（約2-4%）→ 12px、60分以上（約4%以上）→ 15px
-                const titleFontSize = height < 2 ? 10 : height < 4 ? 12 : 15;
+                // カードの高さに応じて滑らかにフォントサイズを調整（最小8px、最大15px）
+                // line-height: 1.35を考慮して、カードの高さに収まるように調整
+                let titleFontSize: number;
+                if (height < 1) {
+                  // 30分未満（約1%未満）
+                  titleFontSize = 8;
+                } else if (height < 1.5) {
+                  // 30-45分（約1-1.5%）
+                  titleFontSize = 9;
+                } else if (height < 2) {
+                  // 45-60分（約1.5-2%）
+                  titleFontSize = 10;
+                } else if (height < 3) {
+                  // 60-90分（約2-3%）
+                  titleFontSize = 11;
+                } else if (height < 4) {
+                  // 90分-2時間（約3-4%）
+                  titleFontSize = 12;
+                } else if (height < 6) {
+                  // 2-3時間（約4-6%）
+                  titleFontSize = 13;
+                } else if (height < 8) {
+                  // 3-4時間（約6-8%）
+                  titleFontSize = 14;
+                } else {
+                  // 4時間以上（約8%以上）
+                  titleFontSize = 15;
+                }
                 const style: React.CSSProperties = {
                   top: `${top}%`,
                   minHeight: `${height}%`,
@@ -968,7 +1010,10 @@ export default function Calendar() {
                           className="calendar-event__title"
                           data-no-drag="true"
                           data-no-expand="true"
-                          style={{ fontSize: `${titleFontSize}px` }}
+                          style={{ 
+                            fontSize: `${titleFontSize}px`,
+                            lineHeight: height < 3 ? 1.1 : height < 4 ? 1.15 : 1.2
+                          }}
                           onPointerDown={handleInteractivePointerDown}
                           onClick={(e) => {
                             e.stopPropagation();
