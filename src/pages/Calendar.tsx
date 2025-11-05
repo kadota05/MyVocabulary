@@ -418,19 +418,38 @@ export default function Calendar() {
   const finalizeDrag = (commit: boolean) => {
     const activeDrag = dragStateRef.current;
     const preview = dragPreview;
+    if (!activeDrag) {
+      dragStateRef.current = null;
+      pressOriginRef.current = null;
+      setDragPreview(null);
+      return;
+    }
     dragStateRef.current = null;
     pressOriginRef.current = null;
     setDragPreview(null);
     if (
       !commit ||
-      !activeDrag ||
       !preview ||
       preview.eventId !== activeDrag.eventId
     ) {
       return;
     }
+    // 実際に移動が発生したかチェック（移動していない場合は何もしない）
+    const originalEvent = events.find(e => e.id === activeDrag.eventId);
+    if (!originalEvent) return;
+    
     const start = clampStart(preview.start);
     const end = clampMinutes(Math.max(preview.end, start + MIN_EVENT_DURATION));
+    
+    // 位置が変わっていない場合は何もしない
+    if (
+      originalEvent.start === start &&
+      originalEvent.end === end &&
+      originalEvent.dateKey === selectedDateKey
+    ) {
+      return;
+    }
+    
     moveEvent(activeDrag.eventId, {
       dateKey: selectedDateKey,
       start,
@@ -456,12 +475,23 @@ export default function Calendar() {
     // ドラッグが実際に開始されていない（dragPreviewが設定されていない）場合は何もしない
     if (!dragPreview || dragPreview.eventId !== activeDrag.eventId) {
       dragStateRef.current = null;
+      setDragPreview(null);
       return;
     }
     if (event.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
       event.currentTarget.releasePointerCapture(activeDrag.pointerId);
     }
-    finalizeDrag(true);
+    // 予定カードからのイベントの場合のみfinalizeDragを呼ぶ（移動アイコンによるドラッグの場合）
+    // ただし、実際に移動アイコンから開始されたドラッグのみ
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.calendar-event__action--move')) {
+      finalizeDrag(true);
+    } else {
+      // 予定カード全体からのドラッグの場合は、タイムライン上で離された場合のみ処理
+      // ここでは何もしない（タイムラインのonPointerUpで処理される）
+      dragStateRef.current = null;
+      setDragPreview(null);
+    }
   };
 
   const handleEventPointerCancel = (event: React.PointerEvent<HTMLElement>) => {
@@ -694,8 +724,19 @@ export default function Calendar() {
                 expandedEventId && "calendar-grid--expanded",
               )}
               ref={timelineRef}
-              onPointerMove={handleEventPointerMove}
+              onPointerMove={(e) => {
+                // タイムライン上での移動処理
+                // 予定カードからのイベントは無視
+                if ((e.target as HTMLElement)?.closest('.calendar-event')) {
+                  return;
+                }
+                handleEventPointerMove(e);
+              }}
               onPointerUp={(e) => {
+                // 予定カードからのイベントは無視
+                if ((e.target as HTMLElement)?.closest('.calendar-event')) {
+                  return;
+                }
                 const activeDrag = dragStateRef.current;
                 if (!activeDrag || activeDrag.pointerId !== e.pointerId) {
                   return;
@@ -706,6 +747,10 @@ export default function Calendar() {
                 finalizeDrag(true);
               }}
               onPointerCancel={(e) => {
+                // 予定カードからのイベントは無視
+                if ((e.target as HTMLElement)?.closest('.calendar-event')) {
+                  return;
+                }
                 const activeDrag = dragStateRef.current;
                 if (!activeDrag || activeDrag.pointerId !== e.pointerId) {
                   return;
