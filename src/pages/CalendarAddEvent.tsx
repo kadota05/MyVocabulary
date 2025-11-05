@@ -293,34 +293,23 @@ export default function CalendarAddEvent() {
         <main className="calendar-add-body">
           {activeTab === "manual" ? (
             <>
-              <section className="calendar-add-card calendar-add-card--color">
-                <h2 className="calendar-color-picker__title">カードの色</h2>
-                <div className="calendar-color-picker" role="radiogroup" aria-label="カードの色">
-                  {COLOR_OPTIONS.map((option) => {
-                    const isActive = option.value === selectedColor;
-                    return (
-                      <div className="calendar-color-picker__item" key={option.value}>
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={isActive}
-                          className={`calendar-color-picker__button${isActive ? " is-active" : ""}`}
-                          onClick={() => setSelectedColor(option.value)}
-                        >
-                          <span
-                            className="calendar-color-picker__swatch"
-                            style={{ backgroundColor: option.tint }}
-                            aria-hidden="true"
-                          />
-                        </button>
-                        <span className="calendar-color-picker__label" aria-hidden="true">
-                          {option.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
+              <div className="calendar-color-strip" role="radiogroup" aria-label="カードの色">
+                {COLOR_OPTIONS.map((option) => {
+                  const isActive = option.value === selectedColor;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      aria-label={`${option.label}を選択`}
+                      className={`calendar-color-dot${isActive ? " is-active" : ""}`}
+                      style={{ backgroundColor: option.tint }}
+                      onClick={() => setSelectedColor(option.value)}
+                    />
+                  );
+                })}
+              </div>
 
               <section className="calendar-add-card calendar-add-card--input">
               <label>

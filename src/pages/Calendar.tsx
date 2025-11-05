@@ -277,15 +277,16 @@ export default function Calendar() {
       const target = event.target as HTMLElement
       const isDragHandle = Boolean(target.closest('[data-drag-handle="true"]'))
       if (!isDragHandle && target.closest('[data-no-drag="true"]')) return
-      const isExpanded = expandedEventId === calendarEvent.id
-      if (isExpanded && !isDragHandle) {
-        pressOriginRef.current = null
+
+      if (!isDragHandle) {
+        if (expandedEventId && expandedEventId !== calendarEvent.id) {
+          setExpandedEventId(null)
+        }
         clearPressTimer()
+        pressOriginRef.current = null
         return
       }
-      if (!isDragHandle) {
-        setExpandedEventId(null)
-      }
+
       clearPressTimer()
       pressOriginRef.current = {
         pointerId: event.pointerId,
@@ -298,29 +299,12 @@ export default function Calendar() {
         dateKey: calendarEvent.dateKey,
         element: event.currentTarget as HTMLElement
       }
-      const delay =
-        event.pointerType === 'touch' || event.pointerType === 'pen'
-          ? LONG_PRESS_DELAY_TOUCH
-          : LONG_PRESS_DELAY_MOUSE
-      pressTimerRef.current = window.setTimeout(() => {
-        startDragFromOrigin()
-      }, delay)
+      startDragFromOrigin()
     }
 
   const handleEventPointerMove = (event: React.PointerEvent<HTMLElement>) => {
     const activeDrag = dragStateRef.current
     if (!activeDrag) {
-      const origin = pressOriginRef.current
-      if (
-        origin &&
-        origin.pointerId === event.pointerId &&
-        (origin.pointerType === 'touch' || origin.pointerType === 'pen')
-      ) {
-        if (Math.abs(event.clientY - origin.clientY) > LONG_PRESS_CANCEL_DISTANCE) {
-          clearPressTimer()
-          pressOriginRef.current = null
-        }
-      }
       return
     }
     if (activeDrag.pointerId !== event.pointerId) return
@@ -374,7 +358,19 @@ export default function Calendar() {
       pressOriginRef.current = null
     }
     const activeDrag = dragStateRef.current
-    if (!activeDrag || activeDrag.pointerId !== event.pointerId) {
+    if (!activeDrag) {
+      const target = event.target as HTMLElement | null
+      if (target?.closest('[data-no-expand="true"]') || target?.closest('[data-drag-handle="true"]')) {
+        return
+      }
+      const container = event.currentTarget as HTMLElement
+      const eventId = container.dataset.eventId
+      if (eventId) {
+        setExpandedEventId(prev => (prev === eventId ? prev : eventId))
+      }
+      return
+    }
+    if (activeDrag.pointerId !== event.pointerId) {
       return
     }
     if (event.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
@@ -619,6 +615,7 @@ export default function Calendar() {
                     <article
                       key={`${event.id}-${event.dateKey}`}
                       className={articleClasses}
+                      data-event-id={event.id}
                       style={style}
                       aria-label={`${event.title} ${event.memo ? `- ${event.memo}` : ''}、${dateTitle}、${minutesToLabel(start)} 〜 ${minutesToLabel(end)}`}
                       onPointerDown={handleEventPointerDown(event)}
@@ -632,6 +629,7 @@ export default function Calendar() {
                           className='calendar-event__expander'
                           aria-label={isExpanded ? '予定カードを折りたたむ' : '予定カードを展開する'}
                           data-no-drag='true'
+                          data-no-expand='true'
                           onPointerDown={handleInteractivePointerDown}
                           onClick={() => toggleExpand(event.id)}
                           style={expanderStyle}
@@ -709,6 +707,7 @@ export default function Calendar() {
                           type='button'
                           className='calendar-event__handle'
                           data-drag-handle='true'
+                          data-no-expand='true'
                           aria-label='予定を移動'
                         >
                           <MoveVertical size={20} strokeWidth={1.6} aria-hidden='true' />
