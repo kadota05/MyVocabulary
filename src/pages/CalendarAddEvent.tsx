@@ -8,10 +8,19 @@ import { toast } from "../components/Toast";
 
 import { InputDateByScrollPicker } from "../components/scroll-picker/InputDateByScrollPicker";
 import { useCalendarStore } from "../state/calendar";
+import type { CalendarEventColor } from "../state/calendar";
 
 const LAST_TAB_KEY = "calendar-add-last-tab";
 
 const MINUTE_STEP = 5;
+
+const COLOR_OPTIONS: Array<{ value: CalendarEventColor; label: string; tint: string }> = [
+  { value: "white", label: "白", tint: "#f8fafc" },
+  { value: "green", label: "緑", tint: "#bbf7d0" },
+  { value: "blue", label: "青", tint: "#bfdbfe" },
+  { value: "red", label: "赤", tint: "#fecaca" },
+  { value: "yellow", label: "黄", tint: "#fef3c7" },
+];
 
 const formatDateLabel = (date: Date) => {
   const y = date.getFullYear();
@@ -138,6 +147,8 @@ export default function CalendarAddEvent() {
 
   const [manualEnd, setManualEnd] = useState(() => new Date(initial.end));
 
+  const [selectedColor, setSelectedColor] = useState<CalendarEventColor>("white");
+
   const [activePicker, setActivePicker] = useState<{
     field: ManualField;
     section: PickerSection;
@@ -171,23 +182,26 @@ export default function CalendarAddEvent() {
     navigate(-1);
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (activeTab === "manual") {
       if (!manualValid) {
         toast("入力内容を確認してください。");
         return;
       }
-
-      addEvent({
-        title: manualTitle,
-        memo: manualMemo,
-        start: manualStart,
-        end: manualEnd,
-        variant: "new",
-      });
-
-      toast("予定を追加しました。");
-      navigate(-1);
+      try {
+        await addEvent({
+          title: manualTitle,
+          memo: manualMemo,
+          start: manualStart,
+          end: manualEnd,
+          color: selectedColor,
+        });
+        toast("予定を追加しました。");
+        navigate(-1);
+      } catch (error) {
+        console.error(error);
+        toast("予定の追加に失敗しました。もう一度お試しください。");
+      }
       return;
     }
 
@@ -276,10 +290,28 @@ export default function CalendarAddEvent() {
         </button>
       </div>
 
-      <main className="calendar-add-body">
-        {activeTab === "manual" ? (
-          <>
-            <section className="calendar-add-card calendar-add-card--input">
+        <main className="calendar-add-body">
+          {activeTab === "manual" ? (
+            <>
+              <div className="calendar-color-strip" role="radiogroup" aria-label="カードの色">
+                {COLOR_OPTIONS.map((option) => {
+                  const isActive = option.value === selectedColor;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={isActive}
+                      aria-label={`${option.label}を選択`}
+                      className={`calendar-color-dot${isActive ? " is-active" : ""}`}
+                      style={{ backgroundColor: option.tint }}
+                      onClick={() => setSelectedColor(option.value)}
+                    />
+                  );
+                })}
+              </div>
+
+              <section className="calendar-add-card calendar-add-card--input">
               <label>
                 <input
                   className="calendar-add-input"
