@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { toast } from "../components/Toast";
 
 import { InputDateByScrollPicker } from "../components/scroll-picker/InputDateByScrollPicker";
-import { useCalendarStore } from "../state/calendar";
+import { useCalendarStore, type CalendarEventVariant } from "../state/calendar";
 
 const LAST_TAB_KEY = "calendar-add-last-tab";
 
@@ -61,6 +61,17 @@ const createInitialRange = () => {
     end,
   };
 };
+
+const COLOR_OPTIONS: Array<{
+  value: CalendarEventVariant;
+  color: string;
+  label: string;
+}> = [
+  { value: "default", color: "#e2e8f0", label: "ホワイト" },
+  { value: "purple", color: "#c4b5fd", label: "パープル" },
+  { value: "peach", color: "#fbbf24", label: "ゴールド" },
+  { value: "new", color: "#f87171", label: "ローズ" },
+];
 
 type ManualField = "start" | "end";
 
@@ -138,6 +149,9 @@ export default function CalendarAddEvent() {
 
   const [manualEnd, setManualEnd] = useState(() => new Date(initial.end));
 
+  const [manualVariant, setManualVariant] =
+    useState<CalendarEventVariant>("new");
+
   const [activePicker, setActivePicker] = useState<{
     field: ManualField;
     section: PickerSection;
@@ -183,7 +197,7 @@ export default function CalendarAddEvent() {
         memo: manualMemo,
         start: manualStart,
         end: manualEnd,
-        variant: "new",
+        variant: manualVariant,
       });
 
       toast("予定を追加しました。");
@@ -301,6 +315,26 @@ export default function CalendarAddEvent() {
                   rows={3}
                 />
               </label>
+
+              <div
+                className="calendar-add-color-row"
+                role="radiogroup"
+                aria-label="カードの色"
+              >
+                {COLOR_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={manualVariant === option.value}
+                    className={`calendar-add-color-chip${manualVariant === option.value ? " is-selected" : ""}`}
+                    style={{ backgroundColor: option.color }}
+                    onClick={() => setManualVariant(option.value)}
+                  >
+                    <span className="sr-only">{option.label}</span>
+                  </button>
+                ))}
+              </div>
             </section>
 
             <section className="calendar-add-card calendar-add-card--schedule">
@@ -364,10 +398,14 @@ export default function CalendarAddEvent() {
                     ? ["year", "month", "day"]
                     : ["hour", "minute"]
                 }
-                minuteStep={activePicker.section === "time" ? MINUTE_STEP : undefined}
+                minuteStep={
+                  activePicker.section === "time" ? MINUTE_STEP : undefined
+                }
                 onConfirm={handlePickerConfirm}
                 onCancel={closePicker}
-                title={activePicker.section === "date" ? "日付を選択" : "時間を選択"}
+                title={
+                  activePicker.section === "date" ? "日付を選択" : "時間を選択"
+                }
                 className="scroll-picker-dialog--sheet"
               />
             )}
