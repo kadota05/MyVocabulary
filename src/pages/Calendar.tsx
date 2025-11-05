@@ -130,6 +130,18 @@ export default function Calendar() {
   }, [loadEvents]);
 
   useEffect(() => {
+    const footerNav = document.querySelector('.footer-nav');
+    if (expandedEventId) {
+      footerNav?.classList.add('is-dimmed');
+    } else {
+      footerNav?.classList.remove('is-dimmed');
+    }
+    return () => {
+      footerNav?.classList.remove('is-dimmed');
+    };
+  }, [expandedEventId]);
+
+  useEffect(() => {
     return () => {
       if (pressTimerRef.current) {
         window.clearTimeout(pressTimerRef.current);
@@ -617,7 +629,11 @@ export default function Calendar() {
   return (
     <div className="page-screen calendar-screen calendar-screen-day">
       <div className="calendar-day-frame">
-        <header className="calendar-day-toolbar calendar-day-toolbar--header">
+        <header className={classNames(
+          "calendar-day-toolbar",
+          "calendar-day-toolbar--header",
+          expandedEventId && "is-dimmed"
+        )}>
           <button
             className="calendar-day-toolbar__nav"
             type="button"
@@ -656,7 +672,10 @@ export default function Calendar() {
         </header>
 
         <div
-          className="calendar-day-week-grid"
+          className={classNames(
+            "calendar-day-week-grid",
+            expandedEventId && "is-dimmed"
+          )}
           role="grid"
           aria-label="Select day within week"
         >
@@ -702,7 +721,10 @@ export default function Calendar() {
         </div>
 
         <main
-          className="calendar-day-main"
+          className={classNames(
+            "calendar-day-main",
+            expandedEventId && "is-dimmed"
+          )}
           role="region"
           aria-label="Daily schedule timeline"
         >
