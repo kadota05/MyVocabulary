@@ -20,6 +20,7 @@ const MIN_EVENT_DURATION = 30;
 const LONG_PRESS_DELAY_MOUSE = 220;
 const LONG_PRESS_DELAY_TOUCH = 2000;
 const LONG_PRESS_CANCEL_DISTANCE = 14;
+const TOUCH_DRAG_THRESHOLD = 20;
 const DAYS_OF_WEEK_JP = ["日", "月", "火", "水", "木", "金", "土"];
 
 type EditingState = { id: string; field: "title" | "memo" } | null;
@@ -326,6 +327,13 @@ export default function Calendar() {
     pressOriginRef.current = null;
   };
 
+  const hasMovedEnough = (origin: PressOrigin, clientX: number, clientY: number) => {
+    const deltaX = Math.abs(clientX - origin.clientX);
+    const deltaY = Math.abs(clientY - origin.clientY);
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    return distance >= TOUCH_DRAG_THRESHOLD;
+  };
+
   const handleEventPointerDown =
     (calendarEvent: CalendarEvent) =>
     (event: React.PointerEvent<HTMLElement>) => {
@@ -339,6 +347,10 @@ export default function Calendar() {
         setExpandedEventId(null);
       }
       clearPressTimer();
+      // 既にドラッグ中の場合は新たなドラッグを開始しない
+      if (dragStateRef.current) {
+        return;
+      }
       pressOriginRef.current = {
         pointerId: event.pointerId,
         clientX: event.clientX,
@@ -368,9 +380,8 @@ export default function Calendar() {
         origin.pointerId === event.pointerId &&
         (origin.pointerType === "touch" || origin.pointerType === "pen")
       ) {
-        if (
-          Math.abs(event.clientY - origin.clientY) > LONG_PRESS_CANCEL_DISTANCE
-        ) {
+        // タッチイベントの場合、移動距離が十分な場合のみドラッグをキャンセル
+        if (hasMovedEnough(origin, event.clientX, event.clientY)) {
           clearPressTimer();
           pressOriginRef.current = null;
         }
@@ -440,6 +451,11 @@ export default function Calendar() {
       if (originEventId && !isWithinNoExpandZone(event.target)) {
         toggleExpand(originEventId);
       }
+      return;
+    }
+    // ドラッグが実際に開始されていない（dragPreviewが設定されていない）場合は何もしない
+    if (!dragPreview || dragPreview.eventId !== activeDrag.eventId) {
+      dragStateRef.current = null;
       return;
     }
     if (event.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
