@@ -18,7 +18,7 @@ const HOURS = Array.from(
 const SNAP_MINUTES = 10;
 const MIN_EVENT_DURATION = 30;
 const LONG_PRESS_DELAY_MOUSE = 220;
-const LONG_PRESS_DELAY_TOUCH = 2000;
+const LONG_PRESS_DELAY_TOUCH = 800;
 const LONG_PRESS_CANCEL_DISTANCE = 14;
 const TOUCH_DRAG_THRESHOLD = 20;
 const DAYS_OF_WEEK_JP = ["日", "月", "火", "水", "木", "金", "土"];
@@ -109,6 +109,7 @@ export default function Calendar() {
   const [editingValue, setEditingValue] = useState("");
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [dragButtonPosition, setDragButtonPosition] = useState<{ x: number; y: number } | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const pressTimerRef = useRef<number | null>(null);
   const pressOriginRef = useRef<PressOrigin | null>(null);
@@ -411,6 +412,13 @@ export default function Calendar() {
     if (activeDrag.pointerId !== event.pointerId) return;
     // ドラッグ中のテキスト選択を防ぐ
     event.preventDefault();
+    
+    // 移動ボタンの位置を指の位置に更新
+    setDragButtonPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    
     const minutes = getRelativeMinutes(event.clientY);
     if (minutes == null) return;
     const rawStart = minutes - activeDrag.offset;
@@ -443,6 +451,8 @@ export default function Calendar() {
     // テキスト選択を再度有効化
     document.body.style.userSelect = '';
     document.body.style.webkitUserSelect = '';
+    // 移動ボタンの位置をリセット
+    setDragButtonPosition(null);
     if (!activeDrag) {
       dragStateRef.current = null;
       pressOriginRef.current = null;
@@ -513,12 +523,16 @@ export default function Calendar() {
       // テキスト選択を再度有効化
       document.body.style.userSelect = '';
       document.body.style.webkitUserSelect = '';
+      // 移動ボタンの位置をリセット
+      setDragButtonPosition(null);
       finalizeDrag(true);
     } else {
       // 予定カード全体からのドラッグの場合は、タイムライン上で離された場合のみ処理
       // ここでは何もしない（タイムラインのonPointerUpで処理される）
       dragStateRef.current = null;
       setDragPreview(null);
+      // 移動ボタンの位置をリセット
+      setDragButtonPosition(null);
       // テキスト選択を再度有効化
       document.body.style.userSelect = '';
       document.body.style.webkitUserSelect = '';
@@ -756,6 +770,23 @@ export default function Calendar() {
                   <span>{minutesToLabel(clampMinutes(dragPreview.start))}</span>
                 </div>
               )}
+              {dragButtonPosition && (
+                <div
+                  className="calendar-drag-button"
+                  style={{
+                    position: 'fixed',
+                    left: `${dragButtonPosition.x}px`,
+                    top: `${dragButtonPosition.y}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 1000,
+                  }}
+                >
+                  <div className="calendar-event__action calendar-event__action--move">
+                    <Move size={18} strokeWidth={1.6} aria-hidden="true" />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div
@@ -787,6 +818,8 @@ export default function Calendar() {
                 if (!dragPreview || dragPreview.eventId !== activeDrag.eventId) {
                   dragStateRef.current = null;
                   setDragPreview(null);
+                  // 移動ボタンの位置をリセット
+                  setDragButtonPosition(null);
                   // テキスト選択を再度有効化
                   document.body.style.userSelect = '';
                   document.body.style.webkitUserSelect = '';
@@ -798,6 +831,8 @@ export default function Calendar() {
                 // テキスト選択を再度有効化
                 document.body.style.userSelect = '';
                 document.body.style.webkitUserSelect = '';
+                // 移動ボタンの位置をリセット
+                setDragButtonPosition(null);
                 finalizeDrag(true);
               }}
               onPointerCancel={(e) => {
@@ -815,6 +850,8 @@ export default function Calendar() {
                 // テキスト選択を再度有効化
                 document.body.style.userSelect = '';
                 document.body.style.webkitUserSelect = '';
+                // 移動ボタンの位置をリセット
+                setDragButtonPosition(null);
                 finalizeDrag(false);
               }}
             >
@@ -1009,6 +1046,11 @@ export default function Calendar() {
                               eventId: calendarEvent.id,
                               start: calendarEvent.start,
                               end: calendarEvent.end,
+                            });
+                            // 移動ボタンの初期位置を設定
+                            setDragButtonPosition({
+                              x: e.clientX,
+                              y: e.clientY,
                             });
                             setExpandedEventId((prev) => (prev === calendarEvent.id ? null : prev));
                             (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
