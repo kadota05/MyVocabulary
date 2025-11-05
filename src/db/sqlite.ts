@@ -46,6 +46,7 @@ export async function getDB(): Promise<Database> {
     db.exec('COMMIT;')
     await persist()
   }
+  ensureCalendarSchema(db)
   return db!
 }
 
@@ -87,6 +88,29 @@ export type ImportRow = {
   example?: string
   source?: string
   date?: string
+}
+
+export type CalendarEventColor = 'white' | 'green' | 'blue' | 'red' | 'yellow'
+
+export type CalendarEventRow = {
+  id: string
+  title: string
+  memo: string
+  color: CalendarEventColor
+  dateKey: string
+  startMinutes: number
+  endMinutes: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type CalendarEventInsert = {
+  title: string
+  memo?: string
+  color: CalendarEventColor
+  dateKey: string
+  startMinutes: number
+  endMinutes: number
 }
 
 function uuid(){
@@ -408,6 +432,177 @@ function parseYMD(ymd: string){
   if (Number.isNaN(dt.getTime())) return null
   dt.setHours(0,0,0,0)
   return dt
+}
+
+const CALENDAR_EVENT_COLORS: readonly CalendarEventColor[] = ['white', 'green', 'blue', 'red', 'yellow']
+const CALENDAR_EVENT_COLOR_SET = new Set<CalendarEventColor>(CALENDAR_EVENT_COLORS)
+const MINUTES_PER_DAY = 24 * 60
+
+function ensureCalendarSchema(database: Database | null){
+  if (!database) return
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      memo TEXT,
+      color TEXT NOT NULL DEFAULT 'white',
+      dateKey TEXT NOT NULL,
+      startMinutes INTEGER NOT NULL,
+      endMinutes INTEGER NOT NULL,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+  `)
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(dateKey, startMinutes);
+  `)
+}
+
+function normalizeCalendarColor(color: string | null | undefined): CalendarEventColor{
+  if (!color) return 'white'
+  const lower = String(color).toLowerCase() as CalendarEventColor
+  return CALENDAR_EVENT_COLOR_SET.has(lower) ? lower : 'white'
+}
+
+function normalizeCalendarRange(startMinutes: number, endMinutes: number){
+  const safeStart = Math.max(0, Math.min(Math.round(startMinutes), MINUTES_PER_DAY - 1))
+  const safeEndRaw = Math.max(safeStart + 1, Math.round(endMinutes))
+  const safeEnd = Math.min(safeEndRaw, MINUTES_PER_DAY)
+  return { start: safeStart, end: safeEnd }
+}
+
+function mapCalendarRow(row: Record<string, unknown>): CalendarEventRow {
+  const normalized = normalizeCalendarRange(Number(row.startMinutes ?? 0), Number(row.endMinutes ?? 0))
+  return {
+    id: String(row.id ?? ''),
+    title: String(row.title ?? ''),
+    memo: row.memo != null ? String(row.memo) : '',
+    color: normalizeCalendarColor(row.color != null ? String(row.color) : undefined),
+    dateKey: String(row.dateKey ?? todayYMD()),
+    startMinutes: normalized.start,
+    endMinutes: normalized.end,
+    createdAt: String(row.createdAt ?? new Date().toISOString()),
+    updatedAt: String(row.updatedAt ?? new Date().toISOString())
+  }
+}
+
+export async function getCalendarEvents(): Promise<CalendarEventRow[]> {
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  const stmt = d.prepare(
+    `SELECT id, title, memo, color, dateKey, startMinutes, endMinutes, createdAt, updatedAt FROM calendar_events ORDER BY dateKey ASC, startMinutes ASC`
+  )
+  const events: CalendarEventRow[] = []
+  try {
+    while (stmt.step()){
+      const row = stmt.getAsObject()
+      events.push(mapCalendarRow(row as Record<string, unknown>))
+    }
+  } finally {
+    stmt.free()
+  }
+  return events
+}
+
+export async function insertCalendarEvent(entry: CalendarEventInsert): Promise<CalendarEventRow> {
+  const title = entry.title.trim()
+  if (!title) throw new Error('CALENDAR_EVENT_MISSING_TITLE')
+  const memo = entry.memo?.trim() ?? ''
+  const color = normalizeCalendarColor(entry.color)
+  const { start, end } = normalizeCalendarRange(entry.startMinutes, entry.endMinutes)
+  const nowIso = new Date().toISOString()
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  const id = uuid()
+  d.exec('BEGIN;')
+  try {
+    d.run(
+      'INSERT INTO calendar_events (id, title, memo, color, dateKey, startMinutes, endMinutes, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, title, memo || null, color, entry.dateKey, start, end, nowIso, nowIso]
+    )
+    d.exec('COMMIT;')
+  } catch (error) {
+    try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+    throw error
+  }
+  await persist()
+  return {
+    id,
+    title,
+    memo,
+    color,
+    dateKey: entry.dateKey,
+    startMinutes: start,
+    endMinutes: end,
+    createdAt: nowIso,
+    updatedAt: nowIso
+  }
+}
+
+export async function updateCalendarEventDetails(
+  id: string,
+  patch: { title?: string; memo?: string; color?: CalendarEventColor }
+): Promise<void> {
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  const rs = d.exec('SELECT title, memo, color FROM calendar_events WHERE id = ?', [id])
+  if (!rs[0] || rs[0].values.length === 0) return
+  const current = rs[0].values[0]
+  const nextTitle = (patch.title ?? (current[0] != null ? String(current[0]) : '')).trim()
+  if (!nextTitle) throw new Error('CALENDAR_EVENT_MISSING_TITLE')
+  const nextMemo = patch.memo !== undefined ? patch.memo.trim() : current[1] != null ? String(current[1]) : ''
+  const nextColor = normalizeCalendarColor(
+    patch.color !== undefined ? patch.color : current[2] != null ? String(current[2]) : undefined
+  )
+  const nowIso = new Date().toISOString()
+  d.exec('BEGIN;')
+  try {
+    d.run(
+      'UPDATE calendar_events SET title = ?, memo = ?, color = ?, updatedAt = ? WHERE id = ?',
+      [nextTitle, nextMemo || null, nextColor, nowIso, id]
+    )
+    d.exec('COMMIT;')
+  } catch (error) {
+    try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+    throw error
+  }
+  await persist()
+}
+
+export async function updateCalendarEventSchedule(
+  id: string,
+  patch: { dateKey: string; startMinutes: number; endMinutes: number }
+): Promise<void> {
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  const { start, end } = normalizeCalendarRange(patch.startMinutes, patch.endMinutes)
+  const nowIso = new Date().toISOString()
+  d.exec('BEGIN;')
+  try {
+    d.run(
+      'UPDATE calendar_events SET dateKey = ?, startMinutes = ?, endMinutes = ?, updatedAt = ? WHERE id = ?',
+      [patch.dateKey, start, end, nowIso, id]
+    )
+    d.exec('COMMIT;')
+  } catch (error) {
+    try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+    throw error
+  }
+  await persist()
+}
+
+export async function deleteCalendarEvent(id: string): Promise<void> {
+  const d = await getDB()
+  ensureCalendarSchema(d)
+  d.exec('BEGIN;')
+  try {
+    d.run('DELETE FROM calendar_events WHERE id = ?', [id])
+    d.exec('COMMIT;')
+  } catch (error) {
+    try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+    throw error
+  }
+  await persist()
 }
 
 function writeBackup(bytes: Uint8Array){

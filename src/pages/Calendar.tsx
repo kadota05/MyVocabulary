@@ -1,4 +1,4 @@
-import { ChevronLeft, Grid2x2, Plus, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, Grid2x2, MoveVertical, Plus, Search, Trash2 } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -72,12 +72,12 @@ const classNames = (...classes: Array<string | boolean | null | undefined>) => c
 
 export default function Calendar() {
   const navigate = useNavigate()
-  const { events, updateEvent, moveEvent, deleteEvent } = useCalendarStore(state => ({
-    events: state.events,
-    updateEvent: state.updateEvent,
-    moveEvent: state.moveEvent,
-    deleteEvent: state.deleteEvent
-  }))
+  const events = useCalendarStore(state => state.events)
+  const updateEvent = useCalendarStore(state => state.updateEvent)
+  const moveEvent = useCalendarStore(state => state.moveEvent)
+  const deleteEvent = useCalendarStore(state => state.deleteEvent)
+  const loadEvents = useCalendarStore(state => state.loadEvents)
+  const isLoaded = useCalendarStore(state => state.isLoaded)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditingState>(null)
@@ -97,6 +97,12 @@ export default function Calendar() {
   const isTodayView = sameDay(now, selectedDate)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
   const showCurrentTime = isTodayView && nowMinutes >= 0 && nowMinutes <= TOTAL_MINUTES
+
+  useEffect(() => {
+    if (!isLoaded) {
+      void loadEvents()
+    }
+  }, [isLoaded, loadEvents])
 
   useEffect(() => {
     return () => {
@@ -269,8 +275,17 @@ export default function Calendar() {
     (calendarEvent: CalendarEvent) => (event: React.PointerEvent<HTMLElement>) => {
       if (event.pointerType === 'mouse' && event.button !== 0) return
       const target = event.target as HTMLElement
-      if (target.closest('[data-no-drag="true"]')) return
-      setExpandedEventId(null)
+      const isDragHandle = Boolean(target.closest('[data-drag-handle="true"]'))
+      if (!isDragHandle && target.closest('[data-no-drag="true"]')) return
+      const isExpanded = expandedEventId === calendarEvent.id
+      if (isExpanded && !isDragHandle) {
+        pressOriginRef.current = null
+        clearPressTimer()
+        return
+      }
+      if (!isDragHandle) {
+        setExpandedEventId(null)
+      }
       clearPressTimer()
       pressOriginRef.current = {
         pointerId: event.pointerId,
@@ -329,7 +344,7 @@ export default function Calendar() {
     setTrashActive(isPointerOverTrash(event.clientX, event.clientY))
   }
 
-  const finalizeDrag = (commit: boolean) => {
+  const finalizeDrag = async (commit: boolean) => {
     const activeDrag = dragStateRef.current
     const preview = dragPreview
     const shouldDelete = trashActive
@@ -341,12 +356,12 @@ export default function Calendar() {
       return
     }
     if (shouldDelete) {
-      deleteEvent(activeDrag.eventId)
+      await deleteEvent(activeDrag.eventId)
       return
     }
     const start = clampStart(preview.start)
     const end = clampMinutes(Math.max(preview.end, start + MIN_EVENT_DURATION))
-    moveEvent(activeDrag.eventId, {
+    await moveEvent(activeDrag.eventId, {
       dateKey: selectedDateKey,
       start,
       end
@@ -365,7 +380,7 @@ export default function Calendar() {
     if (event.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
       event.currentTarget.releasePointerCapture(activeDrag.pointerId)
     }
-    finalizeDrag(true)
+    void finalizeDrag(true)
   }
 
   const handleEventPointerCancel = (event: React.PointerEvent<HTMLElement>) => {
@@ -380,7 +395,16 @@ export default function Calendar() {
     if (event.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
       event.currentTarget.releasePointerCapture(activeDrag.pointerId)
     }
-    finalizeDrag(false)
+    void finalizeDrag(false)
+  }
+
+  const handleGridPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!expandedEventId) return
+    const target = event.target as HTMLElement
+    if (target.closest('.calendar-event')) return
+    clearPressTimer()
+    pressOriginRef.current = null
+    setExpandedEventId(null)
   }
 
   const toggleExpand = (eventId: string) => {
@@ -393,21 +417,26 @@ export default function Calendar() {
     setExpandedEventId(eventId)
   }
 
-  const commitEditing = () => {
+  const commitEditing = async () => {
     if (!editing) return
-    const value = editing.field === 'title' ? editingValue.trim() : editingValue.trim()
-    if (editing.field === 'title') {
-      if (!value) {
-        setEditing(null)
-        setEditingValue('')
-        return
+    const value = editingValue.trim()
+    try {
+      if (editing.field === 'title') {
+        if (!value) {
+          setEditing(null)
+          setEditingValue('')
+          return
+        }
+        await updateEvent(editing.id, { title: value })
+      } else {
+        await updateEvent(editing.id, { memo: value })
       }
-      updateEvent(editing.id, { title: value })
-    } else {
-      updateEvent(editing.id, { memo: value })
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setEditing(null)
+      setEditingValue('')
     }
-    setEditing(null)
-    setEditingValue('')
   }
 
   const cancelEditing = () => {
@@ -418,7 +447,7 @@ export default function Calendar() {
   const handleTitleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault()
-      commitEditing()
+      void commitEditing()
     } else if (event.key === 'Escape') {
       event.preventDefault()
       cancelEditing()
@@ -523,126 +552,171 @@ export default function Calendar() {
                   <span>{minutesToLabel(clampMinutes(dragPreview.start))}</span>
                 </div>
               )}
-            </div>
+              </div>
 
-            <div
-              className={classNames('calendar-grid', 'calendar-grid--day', expandedEventId && 'calendar-grid--expanded')}
-              ref={timelineRef}
-            >
-              <div className='calendar-grid__surface' aria-hidden='true' />
-              {showCurrentTime && (
-                <div className='calendar-current-time' style={{ top: `${(nowMinutes / TOTAL_MINUTES) * 100}%` }}>
-                  <span className='calendar-current-time__dot' aria-hidden='true' />
-                </div>
-              )}
-              {timelineEvents.map(event => {
-                const start = clampStart(event.start)
-                const end = clampMinutes(Math.max(event.end, start + MIN_EVENT_DURATION))
-                const top = (start / TOTAL_MINUTES) * 100
-                const height = ((end - start) / TOTAL_MINUTES) * 100
-                const isExpanded = expandedEventId === event.id
-                const isDragging = dragPreview?.eventId === event.id
-                const isDimmed = expandedEventId !== null && expandedEventId !== event.id
-                const isCompactSlot = height < 12
-                const needsToggle = isCompactSlot || event.title.length > 26 || event.memo.length > 40
-                const showExpander = isExpanded || needsToggle
-                const titleEditing = editing?.id === event.id && editing.field === 'title'
-                const memoEditing = editing?.id === event.id && editing.field === 'memo'
-                const displayTitle = event.title || '無題の予定'
-                const displayMemo = event.memo || 'メモを追加'
-                const style: React.CSSProperties = {
-                  top: `${top}%`,
-                  minHeight: `${height}%`,
-                  height: isExpanded ? 'auto' : `${height}%`,
-                  zIndex: isExpanded ? 30 : undefined
-                }
+              <div
+                className={classNames('calendar-grid', 'calendar-grid--day', expandedEventId && 'calendar-grid--expanded')}
+                ref={timelineRef}
+                onPointerDown={handleGridPointerDown}
+              >
+                <div className='calendar-grid__surface' aria-hidden='true' />
+                {showCurrentTime && (
+                  <div className='calendar-current-time' style={{ top: `${(nowMinutes / TOTAL_MINUTES) * 100}%` }}>
+                    <span className='calendar-current-time__dot' aria-hidden='true' />
+                  </div>
+                )}
+                {timelineEvents.map(event => {
+                  const start = clampStart(event.start)
+                  const end = clampMinutes(Math.max(event.end, start + MIN_EVENT_DURATION))
+                  const top = (start / TOTAL_MINUTES) * 100
+                  const height = ((end - start) / TOTAL_MINUTES) * 100
+                  const isExpanded = expandedEventId === event.id
+                  const isDragging = dragPreview?.eventId === event.id
+                  const isDimmed = expandedEventId !== null && expandedEventId !== event.id
+                  const durationMinutes = Math.max(end - start, MIN_EVENT_DURATION)
+                  const displayMode: 'icon' | 'title' | 'full' =
+                    durationMinutes <= 30 ? 'icon' : durationMinutes <= 60 ? 'title' : 'full'
+                  const iconOnly = displayMode === 'icon'
+                  const titleOnly = displayMode === 'title'
+                  const showTitle = !iconOnly || isExpanded
+                  const showMemoPreview = displayMode === 'full' && Boolean(event.memo?.trim())
+                  const showExpander = true
+                  const expanderSize = Math.max(18, Math.min(32, height * 3.2))
+                  const expanderStyle: React.CSSProperties | undefined =
+                    iconOnly && !isExpanded
+                      ? {
+                          width: `${expanderSize}px`,
+                          height: `${expanderSize}px`,
+                          fontSize: `${Math.max(12, expanderSize * 0.56)}px`
+                        }
+                      : undefined
+                  const titleEditing = editing?.id === event.id && editing.field === 'title'
+                  const memoEditing = editing?.id === event.id && editing.field === 'memo'
+                  const displayTitle = event.title.trim() || '無題の予定'
+                  const collapsedMemo = event.memo.trim()
+                  const expandedMemo = event.memo.trim() || 'メモを追加'
+                  const memoLineClamp = Math.min(6, Math.max(2, Math.floor(durationMinutes / 30)))
+                  const memoPreviewStyle: React.CSSProperties | undefined =
+                    !isExpanded && showMemoPreview ? { WebkitLineClamp: memoLineClamp } : undefined
+                  const style: React.CSSProperties = {
+                    top: `${top}%`,
+                    minHeight: `${height}%`,
+                    height: isExpanded ? 'auto' : `${height}%`,
+                    zIndex: isExpanded ? 30 : undefined
+                  }
+                  const articleClasses = classNames(
+                    'calendar-event',
+                    `calendar-event--color-${event.color ?? 'white'}`,
+                    isExpanded && 'is-expanded',
+                    isDragging && 'is-dragging',
+                    isDimmed && 'is-dimmed',
+                    iconOnly && 'calendar-event--icon-only',
+                    titleOnly && 'calendar-event--title-only'
+                  )
+                  const shouldRenderContent = !iconOnly || isExpanded
 
-                return (
-                  <article
-                    key={`${event.id}-${event.dateKey}`}
-                    className={classNames(
-                      'calendar-event',
-                      `calendar-event--${event.variant ?? 'default'}`,
-                      isExpanded && 'is-expanded',
-                      isDragging && 'is-dragging',
-                      isDimmed && 'is-dimmed'
-                    )}
-                    style={style}
-                    aria-label={`${event.title} ${event.memo ? `- ${event.memo}` : ''}、${dateTitle}、${minutesToLabel(start)} 〜 ${minutesToLabel(end)}`}
-                    onPointerDown={handleEventPointerDown(event)}
-                    onPointerMove={handleEventPointerMove}
-                    onPointerUp={handleEventPointerUp}
-                    onPointerCancel={handleEventPointerCancel}
-                  >
-                    {showExpander && (
-                      <button
-                        type='button'
-                        className='calendar-event__expander'
-                        aria-label={isExpanded ? '予定カードを折りたたむ' : '予定カードを展開する'}
-                        data-no-drag='true'
-                        onPointerDown={handleInteractivePointerDown}
-                        onClick={() => toggleExpand(event.id)}
-                      >
-                        {isExpanded ? '<<' : '>>'}
-                      </button>
-                    )}
-
-                    <div className='calendar-event__content'>
-                      {titleEditing ? (
-                        <input
-                          ref={node => {
-                            editingFieldRef.current = node
-                          }}
-                          type='text'
-                          value={editingValue}
-                          className='calendar-event__input'
-                          data-no-drag='true'
-                          onPointerDown={handleInteractivePointerDown}
-                          onChange={event => setEditingValue(event.target.value)}
-                          onBlur={commitEditing}
-                          onKeyDown={handleTitleKeyDown}
-                        />
-                      ) : (
+                  return (
+                    <article
+                      key={`${event.id}-${event.dateKey}`}
+                      className={articleClasses}
+                      style={style}
+                      aria-label={`${event.title} ${event.memo ? `- ${event.memo}` : ''}、${dateTitle}、${minutesToLabel(start)} 〜 ${minutesToLabel(end)}`}
+                      onPointerDown={handleEventPointerDown(event)}
+                      onPointerMove={handleEventPointerMove}
+                      onPointerUp={handleEventPointerUp}
+                      onPointerCancel={handleEventPointerCancel}
+                    >
+                      {showExpander && (
                         <button
                           type='button'
-                          className='calendar-event__title'
+                          className='calendar-event__expander'
+                          aria-label={isExpanded ? '予定カードを折りたたむ' : '予定カードを展開する'}
                           data-no-drag='true'
                           onPointerDown={handleInteractivePointerDown}
-                          onClick={() => startEditingField(event.id, 'title', event.title)}
+                          onClick={() => toggleExpand(event.id)}
+                          style={expanderStyle}
                         >
-                          {displayTitle}
+                          {isExpanded ? '<<' : '>>'}
                         </button>
                       )}
 
-                      {memoEditing ? (
-                        <textarea
-                          ref={node => {
-                            editingFieldRef.current = node
-                          }}
-                          value={editingValue}
-                          className='calendar-event__textarea'
-                          data-no-drag='true'
-                          rows={isExpanded ? 4 : 2}
-                          onPointerDown={handleInteractivePointerDown}
-                          onChange={event => setEditingValue(event.target.value)}
-                          onBlur={commitEditing}
-                          onKeyDown={handleMemoKeyDown}
-                        />
-                      ) : (
+                      {shouldRenderContent && (
+                        <div className='calendar-event__content'>
+                          {titleEditing ? (
+                            <input
+                              ref={node => {
+                                editingFieldRef.current = node
+                              }}
+                              type='text'
+                              value={editingValue}
+                              className='calendar-event__input'
+                              data-no-drag='true'
+                              onPointerDown={handleInteractivePointerDown}
+                              onChange={event => setEditingValue(event.target.value)}
+                              onBlur={commitEditing}
+                              onKeyDown={handleTitleKeyDown}
+                            />
+                          ) : isExpanded ? (
+                            <button
+                              type='button'
+                              className='calendar-event__title'
+                              data-no-drag='true'
+                              onPointerDown={handleInteractivePointerDown}
+                              onClick={() => startEditingField(event.id, 'title', event.title)}
+                            >
+                              {displayTitle}
+                            </button>
+                          ) : (
+                            showTitle && <div className='calendar-event__title is-static'>{displayTitle}</div>
+                          )}
+
+                          {memoEditing ? (
+                            <textarea
+                              ref={node => {
+                                editingFieldRef.current = node
+                              }}
+                              value={editingValue}
+                              className='calendar-event__textarea'
+                              data-no-drag='true'
+                              rows={isExpanded ? 4 : 2}
+                              onPointerDown={handleInteractivePointerDown}
+                              onChange={event => setEditingValue(event.target.value)}
+                              onBlur={commitEditing}
+                              onKeyDown={handleMemoKeyDown}
+                            />
+                          ) : isExpanded ? (
+                            <button
+                              type='button'
+                              className={classNames('calendar-event__memo', !event.memo && 'is-empty')}
+                              data-no-drag='true'
+                              onPointerDown={handleInteractivePointerDown}
+                              onClick={() => startEditingField(event.id, 'memo', event.memo)}
+                            >
+                              {expandedMemo}
+                            </button>
+                          ) : (
+                            showMemoPreview && (
+                              <div className='calendar-event__memo is-preview' style={memoPreviewStyle}>
+                                {collapsedMemo}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+
+                      {isExpanded && (
                         <button
                           type='button'
-                          className={classNames('calendar-event__memo', !event.memo && 'is-empty')}
-                          data-no-drag='true'
-                          onPointerDown={handleInteractivePointerDown}
-                          onClick={() => startEditingField(event.id, 'memo', event.memo)}
+                          className='calendar-event__handle'
+                          data-drag-handle='true'
+                          aria-label='予定を移動'
                         >
-                          {displayMemo}
+                          <MoveVertical size={20} strokeWidth={1.6} aria-hidden='true' />
                         </button>
                       )}
-                    </div>
-                  </article>
-                )
-              })}
+                    </article>
+                  )
+                })}
             </div>
           </div>
         </main>
