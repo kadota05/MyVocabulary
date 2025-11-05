@@ -351,6 +351,11 @@ export default function Calendar() {
       if (dragStateRef.current) {
         return;
       }
+      // タッチイベントの場合、予定カード全体からのドラッグは無効化（移動アイコンからのみドラッグ可能）
+      if ((event.pointerType === "touch" || event.pointerType === "pen") && 
+          !target?.closest('.calendar-event__action--move')) {
+        return;
+      }
       pressOriginRef.current = {
         pointerId: event.pointerId,
         clientX: event.clientX,
@@ -384,6 +389,9 @@ export default function Calendar() {
         if (hasMovedEnough(origin, event.clientX, event.clientY)) {
           clearPressTimer();
           pressOriginRef.current = null;
+        } else {
+          // 移動距離が十分でない場合は、ドラッグタイマーをクリアしない
+          // これにより、予定カードをタップしただけではドラッグが開始されない
         }
       }
       return;
@@ -734,11 +742,18 @@ export default function Calendar() {
               }}
               onPointerUp={(e) => {
                 // 予定カードからのイベントは無視
-                if ((e.target as HTMLElement)?.closest('.calendar-event')) {
+                const target = e.target as HTMLElement;
+                if (target?.closest('.calendar-event')) {
                   return;
                 }
                 const activeDrag = dragStateRef.current;
                 if (!activeDrag || activeDrag.pointerId !== e.pointerId) {
+                  return;
+                }
+                // ドラッグが実際に開始されていない場合は何もしない
+                if (!dragPreview || dragPreview.eventId !== activeDrag.eventId) {
+                  dragStateRef.current = null;
+                  setDragPreview(null);
                   return;
                 }
                 if (e.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
