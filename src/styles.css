@@ -443,7 +443,7 @@
 .calendar-event__action--delete{ border-color:rgba(185,28,28,.6); color:#b91c1c; }
 .calendar-event__action--delete.is-deleting{ border-color:rgba(185,28,28,.8); background-color:rgba(239,68,68,.24); }
 .calendar-event__action--delete:active{ background-color:rgba(239,68,68,.24); }
-.calendar-event__action--move{ margin-left:auto; border-color:rgba(29,78,216,.6); color:#1d4ed8; }
+.calendar-event__action--move{ margin-left:auto; border-color:rgba(29,78,216,.6); color:#1d4ed8; user-select:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; touch-action:none; }
 .calendar-event__action--move:hover{ border-color:rgba(29,78,216,.8); background-color:rgba(59,130,246,.16); }
 .calendar-event__action--move:active{ background-color:rgba(59,130,246,.26); }
 .calendar-event--white{ background:rgba(248,250,252,.92); border-color:rgba(226,232,240,.9); }

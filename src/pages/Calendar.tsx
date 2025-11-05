@@ -409,6 +409,8 @@ export default function Calendar() {
       return;
     }
     if (activeDrag.pointerId !== event.pointerId) return;
+    // ドラッグ中のテキスト選択を防ぐ
+    event.preventDefault();
     const minutes = getRelativeMinutes(event.clientY);
     if (minutes == null) return;
     const rawStart = minutes - activeDrag.offset;
@@ -438,6 +440,9 @@ export default function Calendar() {
   const finalizeDrag = (commit: boolean) => {
     const activeDrag = dragStateRef.current;
     const preview = dragPreview;
+    // テキスト選択を再度有効化
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
     if (!activeDrag) {
       dragStateRef.current = null;
       pressOriginRef.current = null;
@@ -505,12 +510,18 @@ export default function Calendar() {
     // ただし、実際に移動アイコンから開始されたドラッグのみ
     const target = event.target as HTMLElement | null;
     if (target?.closest('.calendar-event__action--move')) {
+      // テキスト選択を再度有効化
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
       finalizeDrag(true);
     } else {
       // 予定カード全体からのドラッグの場合は、タイムライン上で離された場合のみ処理
       // ここでは何もしない（タイムラインのonPointerUpで処理される）
       dragStateRef.current = null;
       setDragPreview(null);
+      // テキスト選択を再度有効化
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
     }
   };
 
@@ -776,11 +787,17 @@ export default function Calendar() {
                 if (!dragPreview || dragPreview.eventId !== activeDrag.eventId) {
                   dragStateRef.current = null;
                   setDragPreview(null);
+                  // テキスト選択を再度有効化
+                  document.body.style.userSelect = '';
+                  document.body.style.webkitUserSelect = '';
                   return;
                 }
                 if (e.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
                   e.currentTarget.releasePointerCapture(activeDrag.pointerId);
                 }
+                // テキスト選択を再度有効化
+                document.body.style.userSelect = '';
+                document.body.style.webkitUserSelect = '';
                 finalizeDrag(true);
               }}
               onPointerCancel={(e) => {
@@ -795,6 +812,9 @@ export default function Calendar() {
                 if (e.currentTarget.hasPointerCapture(activeDrag.pointerId)) {
                   e.currentTarget.releasePointerCapture(activeDrag.pointerId);
                 }
+                // テキスト選択を再度有効化
+                document.body.style.userSelect = '';
+                document.body.style.webkitUserSelect = '';
                 finalizeDrag(false);
               }}
             >
@@ -965,9 +985,15 @@ export default function Calendar() {
                           onPointerDown={(e) => {
                             e.stopPropagation();
                             if (e.pointerType === "mouse" && e.button !== 0) return;
+                            // テキスト選択を防ぐ
+                            e.preventDefault();
                             clearPressTimer();
                             const calendarEvent = events.find(ev => ev.id === event.id);
                             if (!calendarEvent) return;
+                            
+                            // ドラッグ中はテキスト選択を無効化
+                            document.body.style.userSelect = 'none';
+                            document.body.style.webkitUserSelect = 'none';
                             
                             const pointerMinutes = getRelativeMinutes(e.clientY);
                             const offset = pointerMinutes == null ? 0 : pointerMinutes - calendarEvent.start;
