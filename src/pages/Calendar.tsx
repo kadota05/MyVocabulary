@@ -110,6 +110,7 @@ export default function Calendar() {
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
   const [dragButtonPosition, setDragButtonPosition] = useState<{ x: number; y: number } | null>(null);
+  const dragButtonInitialXRef = useRef<number | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const pressTimerRef = useRef<number | null>(null);
   const pressOriginRef = useRef<PressOrigin | null>(null);
@@ -413,11 +414,13 @@ export default function Calendar() {
     // ドラッグ中のテキスト選択を防ぐ
     event.preventDefault();
     
-    // 移動ボタンの位置を指の位置に更新
-    setDragButtonPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
+    // 移動ボタンの位置を指の位置に更新（横方向は固定、縦方向のみ追従）
+    if (dragButtonInitialXRef.current !== null) {
+      setDragButtonPosition({
+        x: dragButtonInitialXRef.current,
+        y: event.clientY,
+      });
+    }
     
     const minutes = getRelativeMinutes(event.clientY);
     if (minutes == null) return;
@@ -453,6 +456,7 @@ export default function Calendar() {
     document.body.style.webkitUserSelect = '';
     // 移動ボタンの位置をリセット
     setDragButtonPosition(null);
+    dragButtonInitialXRef.current = null;
     if (!activeDrag) {
       dragStateRef.current = null;
       pressOriginRef.current = null;
@@ -1059,9 +1063,11 @@ export default function Calendar() {
                               start: calendarEvent.start,
                               end: calendarEvent.end,
                             });
-                            // 移動ボタンの初期位置を設定
+                            // 移動ボタンの初期位置を設定（横方向は固定、縦方向のみ追従）
+                            const buttonRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            dragButtonInitialXRef.current = buttonRect.left + buttonRect.width / 2;
                             setDragButtonPosition({
-                              x: e.clientX,
+                              x: dragButtonInitialXRef.current,
                               y: e.clientY,
                             });
                             setExpandedEventId((prev) => (prev === calendarEvent.id ? null : prev));
