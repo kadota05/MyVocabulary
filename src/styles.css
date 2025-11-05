@@ -399,11 +399,11 @@
 .calendar-time-column{ position:relative; min-height:100%; display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; font-weight:600; color:#64748b; font-size:12px; letter-spacing:0.12em; text-align:right; padding-right:6px; }
 .calendar-time-label{ height:var(--calendar-hour-height); display:flex; align-items:flex-start; justify-content:flex-end; width:100%; padding-top: 0px; }
 .calendar-time-indicator{ position:absolute; left:-6px; transform:translate(-100%, -50%); background:rgba(15,23,42,.92); color:#f8fafc; padding:4px 10px; border-radius:999px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; box-shadow:0 12px 24px rgba(15,23,42,.35); pointer-events:none; z-index:4; opacity:.95; }
-.calendar-grid{ position:relative; height:100%; min-height:100%; border-radius:24px; border:1px solid rgba(71,85,105,.8); background:rgba(10,15,28,.9); overflow:hidden; touch-action:pan-y; box-shadow:inset 0 0 0 1px rgba(15,23,42,.65); }
+.calendar-grid{ position:relative; height:100%; min-height:100%; max-height:100%; border-radius:24px; border:1px solid rgba(71,85,105,.8); background:rgba(10,15,28,.9); overflow:hidden; touch-action:pan-y; box-shadow:inset 0 0 0 1px rgba(15,23,42,.65); contain:layout style; }
 .calendar-grid--day{ border-radius:22px; border-color:rgba(71,85,105,.8); background:rgba(5,8,20,.92); }
 .calendar-grid__surface{ position:absolute; inset:0; background-image:repeating-linear-gradient(to bottom, transparent, transparent calc(var(--calendar-hour-height) - 1px), rgba(51,65,85,.6) calc(var(--calendar-hour-height) - 1px), rgba(51,65,85,.6) var(--calendar-hour-height)); background-position-y: 8px; pointer-events:none; z-index:1; }
 .calendar-grid::before{ content:''; position:absolute; top:0; bottom:0; left:22px; width:2px; background:rgba(239,68,68,.7); z-index:3; }
-.calendar-grid--expanded{ overflow:visible; }
+.calendar-grid--expanded{ overflow:visible; contain:none; }
 .calendar-grid--expanded::after{ content:''; position:absolute; inset:-32px -12px -32px -38px; background:rgba(2,6,23,.6); border-radius:32px; pointer-events:none; z-index:2; }
 .calendar-event{ position:absolute; left:30px; right:20px; border-radius:18px; padding:14px 16px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; box-shadow:0 20px 30px rgba(0,0,0,.35); border:1px solid transparent; z-index:3; cursor:grab; transition:box-shadow .18s ease, transform .18s ease, opacity .18s ease; touch-action:manipulation; overflow:visible; background-clip:padding-box; }
 .calendar-event.is-dragging{ cursor:grabbing; box-shadow:0 28px 48px rgba(0,0,0,.45); opacity:.96; transform:scale(1.01); }

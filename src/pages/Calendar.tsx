@@ -798,7 +798,9 @@ export default function Calendar() {
                   top: `${top}%`,
                   minHeight: `${height}%`,
                   height: isExpanded ? "auto" : `${height}%`,
+                  maxHeight: isExpanded ? "none" : `${height}%`,
                   zIndex: isExpanded ? 30 : undefined,
+                  position: "absolute",
                 };
 
                 return (
