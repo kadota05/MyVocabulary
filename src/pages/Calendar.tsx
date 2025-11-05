@@ -755,11 +755,23 @@ export default function Calendar() {
         >
           <div className="calendar-timeline calendar-timeline--day">
             <div className="calendar-time-column" aria-hidden="true">
-              {HOURS.map((hour) => (
-                <div key={`label-${hour}`} className="calendar-time-label">
-                  {formatHourLabel(hour)}
-                </div>
-              ))}
+              {HOURS.map((hour) => {
+                const hourMinutes = hour * 60;
+                const isDraggingHour = dragPreview && 
+                  clampMinutes(dragPreview.start) >= hourMinutes && 
+                  clampMinutes(dragPreview.start) < hourMinutes + 60;
+                return (
+                  <div key={`label-${hour}`} className="calendar-time-label">
+                    {isDraggingHour ? (
+                      <span className="calendar-time-label__drag-time">
+                        {minutesToLabel(clampMinutes(dragPreview.start))}
+                      </span>
+                    ) : (
+                      formatHourLabel(hour)
+                    )}
+                  </div>
+                );
+              })}
               {dragPreview && (
                 <div
                   className="calendar-time-indicator"
