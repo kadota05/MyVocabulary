@@ -301,7 +301,7 @@ export default function CalendarAddEvent() {
               style={{ 
                 display: "flex", 
                 gap: "18px", 
-                padding: "3px 20px",
+                padding: "18px 20px",
                 justifyContent: "center"
               }}
             >

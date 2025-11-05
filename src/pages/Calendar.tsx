@@ -79,8 +79,13 @@ const formatHourLabel = (hour: number) => `${hour}:00`;
 
 const clampMinutes = (value: number) =>
   Math.min(Math.max(value, 0), TOTAL_MINUTES);
-const clampStart = (value: number) =>
-  Math.min(clampMinutes(value), TOTAL_MINUTES - MIN_EVENT_DURATION);
+// 開始時刻は23:50（1430分）まで許可。終了時刻が24:00を超えないようにする
+const clampStart = (value: number) => {
+  const clamped = clampMinutes(value);
+  // 23:50（1430分）まで許可
+  const maxStart = 1430;
+  return Math.min(clamped, maxStart);
+};
 const snapStart = (value: number) =>
   Math.floor(value / SNAP_MINUTES) * SNAP_MINUTES;
 const sameDay = (a: Date, b: Date) =>
@@ -432,25 +437,28 @@ export default function Calendar() {
     const minutes = getRelativeMinutes(event.clientY);
     if (minutes == null) return;
     const rawStart = minutes - activeDrag.offset;
-    const snappedStart = clampStart(snapStart(rawStart));
+    const snappedStart = snapStart(rawStart);
+    // 開始時刻を23:50（1430分）まで制限
+    const adjustedStart = clampStart(snappedStart);
     const duration = activeDrag.duration;
-    const proposedEnd = snappedStart + duration;
-    const safeEnd = clampMinutes(
-      Math.max(proposedEnd, snappedStart + MIN_EVENT_DURATION),
+    // 終了時刻を計算（24:00を超えないように）
+    const proposedEnd = adjustedStart + duration;
+    const adjustedEnd = clampMinutes(
+      Math.max(adjustedStart + MIN_EVENT_DURATION, Math.min(proposedEnd, TOTAL_MINUTES)),
     );
     setDragPreview((prev) => {
       if (
         prev &&
         prev.eventId === activeDrag.eventId &&
-        prev.start === snappedStart &&
-        prev.end === safeEnd
+        prev.start === adjustedStart &&
+        prev.end === adjustedEnd
       ) {
         return prev;
       }
       return {
         eventId: activeDrag.eventId,
-        start: snappedStart,
-        end: safeEnd,
+        start: adjustedStart,
+        end: adjustedEnd,
       };
     });
   };
