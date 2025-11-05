@@ -1,5 +1,6 @@
 import { ChevronLeft, Grid2x2, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const START_HOUR = 0
 const END_HOUR = 24
@@ -115,6 +116,7 @@ const createSeededEvents = (): TimelineEvent[] => {
 }
 
 export default function Calendar() {
+  const navigate = useNavigate()
   const [events] = useState(() => createSeededEvents())
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [draftEvent, setDraftEvent] = useState<TimelineEvent | null>(null)
@@ -245,6 +247,9 @@ export default function Calendar() {
       window.alert('近日公開予定です。')
     }
   }
+  const navigateToAdd = () => {
+    navigate('/calendar/add')
+  }
 
   const clearPressTimer = () => {
     if (pressTimerRef.current) {
@@ -368,7 +373,7 @@ export default function Calendar() {
             <button className='calendar-day-toolbar__action' type='button' aria-label='予定を検索' onClick={showComingSoon}>
               <Search size={24} strokeWidth={1.6} aria-hidden='true' />
             </button>
-            <button className='calendar-day-toolbar__action is-accent' type='button' aria-label='予定を追加' onClick={showComingSoon}>
+            <button className='calendar-day-toolbar__action is-accent' type='button' aria-label='予定を追加' onClick={navigateToAdd}>
               <Plus size={24} strokeWidth={1.6} aria-hidden='true' />
             </button>
           </div>
