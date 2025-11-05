@@ -11,8 +11,10 @@ import type { CSSProperties } from 'react'
 const DEFAULT_ITEM_HEIGHT = 40
 const DEFAULT_VISIBLE_COUNT = 5
 const TAP_DISTANCE_THRESHOLD = 5
-const MOMENTUM_DECAY = 0.85
-const MOMENTUM_STOP_VELOCITY = 0.5
+const MOMENTUM_FRICTION = 0.0025
+const MOMENTUM_STOP_VELOCITY = 0.02
+const MOMENTUM_MAX_VELOCITY = 2.2
+const VELOCITY_SMOOTHING = 0.55
 const SETTLE_DELAY = 140
 const WHEEL_DELTA_LINE = 1
 const WHEEL_DELTA_PAGE = 2
@@ -303,21 +305,34 @@ export const ScrollPicker = <T,>({
 
   const startMomentum = useCallback(
     (initialVelocity: number) => {
-      const velocityPerFrame = Number.isFinite(initialVelocity) ? initialVelocity : 0
-      if (Math.abs(velocityPerFrame) < MOMENTUM_STOP_VELOCITY) {
+      const velocityPerMs = Number.isFinite(initialVelocity) ? initialVelocity : 0
+      const clampedInitial = Math.max(-MOMENTUM_MAX_VELOCITY, Math.min(MOMENTUM_MAX_VELOCITY, velocityPerMs))
+      if (Math.abs(clampedInitial) < MOMENTUM_STOP_VELOCITY) {
         snapToNearest()
         return
       }
       cancelAlignment()
-      let velocity = velocityPerFrame
-      const step = () => {
-        velocity *= MOMENTUM_DECAY
+      let velocity = clampedInitial
+      let lastTimestamp: number | null = null
+      const step = (timestamp: number) => {
+        if (lastTimestamp == null) {
+          lastTimestamp = timestamp
+          momentumFrameRef.current = requestAnimationFrame(step)
+          return
+        }
+        const deltaTime = timestamp - lastTimestamp
+        lastTimestamp = timestamp
+        if (deltaTime <= 0) {
+          momentumFrameRef.current = requestAnimationFrame(step)
+          return
+        }
+        velocity *= Math.exp(-MOMENTUM_FRICTION * deltaTime)
         if (Math.abs(velocity) < MOMENTUM_STOP_VELOCITY) {
           momentumFrameRef.current = null
           snapToNearest()
           return
         }
-        const nextOffset = offsetRef.current + velocity
+        const nextOffset = offsetRef.current + velocity * deltaTime
         const clamped = clampOffset(nextOffset)
         if ((clamped === 0 && nextOffset <= 0) || (clamped === maxOffset && nextOffset >= maxOffset)) {
           setOffsetState(clamped)
@@ -408,8 +423,10 @@ export const ScrollPicker = <T,>({
       const next = offsetRef.current + offsetDelta
       setOffsetState(next)
       const deltaTime = event.timeStamp - state.lastTime
-      const timeFactor = deltaTime > 0 ? deltaTime / (1000 / 60) : 1
-      state.velocity = offsetDelta / (timeFactor || 1)
+      if (deltaTime > 0) {
+        const instantVelocity = offsetDelta / deltaTime
+        state.velocity = state.velocity * (1 - VELOCITY_SMOOTHING) + instantVelocity * VELOCITY_SMOOTHING
+      }
     }
     state.lastY = event.clientY
     state.lastTime = event.timeStamp
