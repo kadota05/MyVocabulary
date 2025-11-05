@@ -68,6 +68,14 @@ const minutesToLabel = (minutes: number) => {
   return `${twelveHour}:${paddedMinutes} ${suffix}`;
 };
 
+const minutesToTime24 = (minutes: number) => {
+  const hours24 = Math.floor(minutes / 60);
+  const minutesPart = minutes % 60;
+  const paddedHours = hours24.toString().padStart(2, "0");
+  const paddedMinutes = minutesPart.toString().padStart(2, "0");
+  return `${paddedHours}:${paddedMinutes}`;
+};
+
 const formatHourLabel = (hour: number) => `${hour}:00`;
 
 const clampMinutes = (value: number) =>
@@ -768,7 +776,7 @@ export default function Calendar() {
                   <div key={`label-${hour}`} className="calendar-time-label">
                     {isDraggingHour ? (
                       <span className="calendar-time-label__drag-time">
-                        {minutesToLabel(clampMinutes(dragPreview.start))}
+                        {minutesToTime24(clampMinutes(dragPreview.start))}
                       </span>
                     ) : (
                       formatHourLabel(hour)
