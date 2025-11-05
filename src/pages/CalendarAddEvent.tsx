@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { toast } from "../components/Toast";
 
 import { InputDateByScrollPicker } from "../components/scroll-picker/InputDateByScrollPicker";
-import { useCalendarStore } from "../state/calendar";
+import { useCalendarStore, type CalendarEventColor } from "../state/calendar";
 
 const LAST_TAB_KEY = "calendar-add-last-tab";
 
@@ -61,6 +61,18 @@ const createInitialRange = () => {
     end,
   };
 };
+
+const COLOR_OPTIONS: Array<{
+  value: CalendarEventColor;
+  color: string;
+  label: string;
+}> = [
+  { value: "white", color: "#e2e8f0", label: "ホワイト" },
+  { value: "green", color: "#86efac", label: "グリーン" },
+  { value: "blue", color: "#93c5fd", label: "ブルー" },
+  { value: "red", color: "#f87171", label: "レッド" },
+  { value: "yellow", color: "#fbbf24", label: "イエロー" },
+];
 
 type ManualField = "start" | "end";
 
@@ -138,6 +150,9 @@ export default function CalendarAddEvent() {
 
   const [manualEnd, setManualEnd] = useState(() => new Date(initial.end));
 
+  const [manualColor, setManualColor] =
+    useState<CalendarEventColor>("white");
+
   const [activePicker, setActivePicker] = useState<{
     field: ManualField;
     section: PickerSection;
@@ -183,7 +198,7 @@ export default function CalendarAddEvent() {
         memo: manualMemo,
         start: manualStart,
         end: manualEnd,
-        variant: "new",
+        color: manualColor,
       });
 
       toast("予定を追加しました。");
@@ -279,6 +294,42 @@ export default function CalendarAddEvent() {
       <main className="calendar-add-body">
         {activeTab === "manual" ? (
           <>
+            <div
+              className="calendar-add-color-row"
+              role="radiogroup"
+              aria-label="カードの色"
+              style={{ 
+                display: "flex", 
+                gap: "18px", 
+                padding: "3px 20px",
+                justifyContent: "center"
+              }}
+            >
+              {COLOR_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={manualColor === option.value}
+                  style={{ 
+                    width: "32px", 
+                    height: "32px", 
+                    borderRadius: "50%", 
+                    border: manualColor === option.value 
+                      ? "2px solid #64748b" 
+                      : "2px solid transparent",
+                    backgroundColor: option.color,
+                    cursor: "pointer",
+                    transform: manualColor === option.value ? "scale(1.15)" : "scale(1)",
+                    transition: "transform 0.2s ease, border-color 0.2s ease"
+                  }}
+                  onClick={() => setManualColor(option.value)}
+                >
+                  <span className="sr-only">{option.label}</span>
+                </button>
+              ))}
+            </div>
+
             <section className="calendar-add-card calendar-add-card--input">
               <label>
                 <input
@@ -364,10 +415,14 @@ export default function CalendarAddEvent() {
                     ? ["year", "month", "day"]
                     : ["hour", "minute"]
                 }
-                minuteStep={activePicker.section === "time" ? MINUTE_STEP : undefined}
+                minuteStep={
+                  activePicker.section === "time" ? MINUTE_STEP : undefined
+                }
                 onConfirm={handlePickerConfirm}
                 onCancel={closePicker}
-                title={activePicker.section === "date" ? "日付を選択" : "時間を選択"}
+                title={
+                  activePicker.section === "date" ? "日付を選択" : "時間を選択"
+                }
                 className="scroll-picker-dialog--sheet"
               />
             )}
