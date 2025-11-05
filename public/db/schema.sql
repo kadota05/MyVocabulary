@@ -33,3 +33,18 @@ CREATE TABLE IF NOT EXISTS review_log (
 -- indices
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_phrase ON words(phrase);
 CREATE INDEX IF NOT EXISTS idx_due ON srs_state(nextDueDate);
+
+-- calendar events
+CREATE TABLE IF NOT EXISTS calendar_events (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  memo TEXT,
+  color TEXT NOT NULL DEFAULT 'white',
+  dateKey TEXT NOT NULL,
+  startMinutes INTEGER NOT NULL,
+  endMinutes INTEGER NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(dateKey, startMinutes);

@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { toast } from "../components/Toast";
 
 import { InputDateByScrollPicker } from "../components/scroll-picker/InputDateByScrollPicker";
+import { useCalendarStore } from "../state/calendar";
 
 const LAST_TAB_KEY = "calendar-add-last-tab";
 
@@ -117,6 +118,7 @@ const TEMPLATE_LIBRARY: TemplateActivity[] = [
 
 export default function CalendarAddEvent() {
   const navigate = useNavigate();
+  const addEvent = useCalendarStore((state) => state.addEvent);
 
   const initial = useMemo(() => createInitialRange(), []);
 
@@ -150,12 +152,20 @@ export default function CalendarAddEvent() {
     }
   }, [activeTab]);
 
-  const manualError =
-    manualEnd.getTime() <= manualStart.getTime()
-      ? "終了は開始より後に設定してください"
-      : "";
+  const manualTitleValid = manualTitle.trim().length > 0;
+  const isSameDay =
+    manualStart.getFullYear() === manualEnd.getFullYear() &&
+    manualStart.getMonth() === manualEnd.getMonth() &&
+    manualStart.getDate() === manualEnd.getDate();
 
-  const manualValid = manualError === "";
+  const manualTimeError =
+    manualEnd.getTime() <= manualStart.getTime()
+      ? "終了は開始後に設定してください"
+      : !isSameDay
+        ? "開始と終了は同じ日付を選択してください"
+        : "";
+
+  const manualValid = manualTitleValid && manualTimeError === "";
 
   const handleCancel = () => {
     navigate(-1);
@@ -163,17 +173,25 @@ export default function CalendarAddEvent() {
 
   const handleAdd = () => {
     if (activeTab === "manual") {
-      if (!manualValid) return;
+      if (!manualValid) {
+        toast("入力内容を確認してください。");
+        return;
+      }
 
-      toast("手動入力の登録は近日追加されます。");
+      addEvent({
+        title: manualTitle,
+        memo: manualMemo,
+        start: manualStart,
+        end: manualEnd,
+        variant: "new",
+      });
 
+      toast("予定を追加しました。");
       navigate(-1);
-
       return;
     }
 
     toast("テンプレートからの追加は近日対応予定です。");
-
     navigate(-1);
   };
 
@@ -268,6 +286,8 @@ export default function CalendarAddEvent() {
                   type="text"
                   placeholder="タイトル"
                   value={manualTitle}
+                  required
+                  aria-invalid={!manualTitleValid}
                   onChange={(event) => setManualTitle(event.target.value)}
                 />
               </label>
@@ -307,7 +327,7 @@ export default function CalendarAddEvent() {
               </div>
 
               <div
-                className={`calendar-schedule-row ${manualError ? "has-error" : ""}`}
+                className={`calendar-schedule-row ${manualTimeError ? "has-error" : ""}`}
               >
                 <div className="calendar-schedule-row__label">終了</div>
 
@@ -330,8 +350,8 @@ export default function CalendarAddEvent() {
                 </div>
               </div>
 
-              {manualError && (
-                <p className="calendar-add-error">{manualError}</p>
+              {manualTimeError && (
+                <p className="calendar-add-error">{manualTimeError}</p>
               )}
             </section>
 
