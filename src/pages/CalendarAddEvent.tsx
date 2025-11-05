@@ -314,6 +314,9 @@ export default function CalendarAddEvent() {
                   style={{ 
                     width: "32px", 
                     height: "32px", 
+                    minWidth: "32px",
+                    minHeight: "32px",
+                    aspectRatio: "1",
                     borderRadius: "50%", 
                     border: manualColor === option.value 
                       ? "2px solid #64748b" 
@@ -321,7 +324,8 @@ export default function CalendarAddEvent() {
                     backgroundColor: option.color,
                     cursor: "pointer",
                     transform: manualColor === option.value ? "scale(1.15)" : "scale(1)",
-                    transition: "transform 0.2s ease, border-color 0.2s ease"
+                    transition: "transform 0.2s ease, border-color 0.2s ease",
+                    flexShrink: 0
                   }}
                   onClick={() => setManualColor(option.value)}
                 >

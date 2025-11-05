@@ -406,7 +406,7 @@
 .calendar-timeline--day{ gap:12px; }
 .calendar-time-column{ position:relative; height:100%; display:flex; flex-direction:column; align-items:flex-end; justify-content:flex-start; font-weight:600; color:#64748b; font-size:12px; letter-spacing:0.12em; text-align:right; padding-right:6px; }
 .calendar-time-label{ height:var(--calendar-hour-height); display:flex; align-items:flex-start; justify-content:flex-end; width:100%; padding-top: 0px; flex-shrink:0; }
-.calendar-time-label__drag-time{ font-weight:700; }
+.calendar-time-label__drag-time{ font-weight:600; color:#fff; }
 .calendar-time-indicator{ position:absolute; left:-6px; transform:translate(-100%, -50%); background:rgba(15,23,42,.92); color:#f8fafc; padding:4px 10px; border-radius:999px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; box-shadow:0 12px 24px rgba(15,23,42,.35); pointer-events:none; z-index:4; opacity:.95; }
 .calendar-grid{ position:relative; height:calc(var(--calendar-hour-height) * var(--calendar-hours)); border-radius:24px; border:1px solid rgba(71,85,105,.8); background:rgba(10,15,28,.9); overflow:hidden; touch-action:pan-y; box-shadow:inset 0 0 0 1px rgba(15,23,42,.65); contain:layout style; isolation:isolate; }
 .calendar-grid--day{ border-radius:22px; border-color:rgba(71,85,105,.8); background:rgba(5,8,20,.92); }
