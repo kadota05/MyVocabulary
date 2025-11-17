@@ -242,7 +242,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: ()=>void;
   const stop: (event: MouseEvent<HTMLDivElement>) => void = event => { event.stopPropagation() }
   return (
     <div className='modal-overlay' role='dialog' aria-modal='true' aria-label={title} onClick={handleOverlay}>
-      <div className='modal-card' onClick={stop}>
+      <div className='modal-surface' onClick={stop}>
         <div className='modal-header'>
           <div className='modal-title'>{title}</div>
           <button type='button' className='modal-close' onClick={onClose} aria-label='Close'>

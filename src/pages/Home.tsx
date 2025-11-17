@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
-import { addWord, getWordSummary, importRows, type WordSummary } from '~/db/sqlite'
+import { addWord, getWordSummary, importRows, type ImportRow, type WordSummary } from '~/db/sqlite'
+import { parseCsv } from '~/lib/csv'
 import { ensureGoogleLoaded, fetchFirstTableRows } from '~/lib/google'
 import { useImportSettings } from '~/state/importSettings'
 
@@ -19,8 +20,16 @@ export default function Home(){
   const [newWordBusy, setNewWordBusy] = useState(false)
   const [newWord, setNewWord] = useState({ phrase:'', meaning:'', example:'', source:'' })
   const [duplicateError, setDuplicateError] = useState<string | null>(null)
+  const [csvModalOpen, setCsvModalOpen] = useState(false)
+  const [csvRows, setCsvRows] = useState<ImportRow[]>([])
+  const [csvFileName, setCsvFileName] = useState('')
+  const [csvError, setCsvError] = useState<string | null>(null)
+  const [csvBusy, setCsvBusy] = useState(false)
+  const [csvParsing, setCsvParsing] = useState(false)
+  const [csvProgress, setCsvProgress] = useState<{done:number; total:number}>({ done:0, total:0 })
   const [summary, setSummary] = useState<WordSummary>({ total:0, learning:0, learned:0, firstCreatedAt: null })
   const phraseInputRef = useRef<HTMLInputElement|null>(null)
+  const csvInputRef = useRef<HTMLInputElement|null>(null)
 
   useEffect(()=>{
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -30,11 +39,15 @@ export default function Home(){
           setNewWordOpen(false)
           resetNewWord()
         }
+        if (!csvBusy){
+          setCsvModalOpen(false)
+          resetCsvImport()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  },[newWordBusy])
+  },[newWordBusy, csvBusy])
 
   const fabOpenRef = useRef(fabOpen)
   useEffect(()=> { fabOpenRef.current = fabOpen },[fabOpen])
@@ -92,10 +105,37 @@ export default function Home(){
   const learningCountFormatted = useMemo(()=> summary.learning.toLocaleString('en-US'),[summary.learning])
   const learnedCountFormatted = useMemo(()=> summary.learned.toLocaleString('en-US'),[summary.learned])
   const todayLabel = formatDisplayDate(new Date())
+  const csvPreviewRows = csvRows.slice(0, 20)
+  const csvRemaining = Math.max(0, csvRows.length - csvPreviewRows.length)
+  const csvHasPreview = csvRows.length > 0
+  const csvActionLabel = csvBusy ? `追加中 ${csvProgress.done}/${csvProgress.total || csvRows.length}` : '追加する'
+  const csvLayoutClass = ['col', 'csv-import-layout', csvHasPreview ? 'has-preview' : ''].filter(Boolean).join(' ')
 
   function resetNewWord(){
     setNewWord({ phrase:'', meaning:'', example:'', source:'' })
     setDuplicateError(null)
+  }
+
+  function resetCsvImport(){
+    setCsvRows([])
+    setCsvFileName('')
+    setCsvError(null)
+    setCsvParsing(false)
+    setCsvProgress({ done:0, total:0 })
+    setCsvBusy(false)
+    if (csvInputRef.current) csvInputRef.current.value = ''
+  }
+
+  const openCsvModal = () => {
+    resetCsvImport()
+    setFabOpen(false)
+    setCsvModalOpen(true)
+  }
+
+  const closeCsvModal = () => {
+    if (csvBusy) return
+    setCsvModalOpen(false)
+    resetCsvImport()
   }
 
   function formatGapiError(e:any){
@@ -145,6 +185,58 @@ export default function Home(){
       setBusy(false)
       setPhase('idle')
       setProgress({ done:0, total:0 })
+    }
+  }
+
+  const handleCsvFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file){
+      setCsvRows([])
+      setCsvFileName('')
+      setCsvError(null)
+      return
+    }
+    setCsvParsing(true)
+    setCsvError(null)
+    setCsvProgress({ done:0, total:0 })
+    try{
+      const text = await file.text()
+      const table = parseCsv(text)
+      const rows = buildImportRowsFromCsv(table)
+      setCsvRows(rows)
+      setCsvFileName(file.name)
+    } catch (error){
+      setCsvRows([])
+      setCsvFileName('')
+      setCsvError(describeCsvError(error))
+      console.error('Failed to parse CSV file', error)
+    } finally{
+      setCsvParsing(false)
+    }
+  }
+
+  const handleCsvReupload = () => {
+    if (csvBusy || csvParsing) return
+    if (csvInputRef.current) csvInputRef.current.value = ''
+    csvInputRef.current?.click()
+  }
+
+  async function onImportCsv(){
+    if (csvBusy || !csvRows.length) return
+    setCsvBusy(true)
+    setCsvError(null)
+    setCsvProgress({ done:0, total:csvRows.length })
+    try{
+      const stats = await importRows(csvRows, (done,total)=> setCsvProgress({ done, total }))
+      toast(`Imported ${stats.added} • Skipped ${stats.skipped} • Failed ${stats.failed}`)
+      await refreshStats()
+      setCsvModalOpen(false)
+      resetCsvImport()
+    } catch (error){
+      console.error('CSV import failed', error)
+      setCsvError('CSVの取り込みに失敗しました。もう一度お試しください。')
+    } finally{
+      setCsvBusy(false)
     }
   }
 
@@ -250,14 +342,15 @@ export default function Home(){
             onClick={()=>{ setFabOpen(false); onImport() }}
             disabled={busy}
           >
-            Import
+            Import(docs)
           </button>
           <button
             type='button'
-            className='fab-item fab-item--leap'
-            onClick={()=>{ setFabOpen(false); nav('/leap') }}
+            className='fab-item'
+            onClick={openCsvModal}
+            disabled={csvBusy}
           >
-            必携英単語Leap
+            Import(csv)
           </button>
           <button
             type='button'
@@ -266,17 +359,95 @@ export default function Home(){
           >
             Add Card
           </button>
-        </div>
-        <button
-          type='button'
-          className='fab-toggle'
-          aria-label='Actions menu'
+      </div>
+      <button
+        type='button'
+        className='fab-toggle'
+        aria-label='Actions menu'
           aria-expanded={fabOpen}
           onClick={()=> setFabOpen(o=>!o)}
         >
           <span aria-hidden='true'>+</span>
         </button>
       </div>
+
+      {csvModalOpen && (
+        <Modal title='Import CSV' onClose={closeCsvModal}>
+          <div className={csvLayoutClass}>
+            {!csvHasPreview && (
+              <p className='csv-import-hint'>
+                phrase, meaning, tips, source の列を持つCSVファイルを選択してください。
+              </p>
+            )}
+            {csvHasPreview && (
+              <div className='csv-import-summary'>
+                <div className='csv-import-meta'>
+                  選択中: {csvFileName || '未保存'} ・ {csvRows.length}件
+                </div>
+                <button
+                  type='button'
+                  className='csv-reupload-button'
+                  onClick={handleCsvReupload}
+                  disabled={csvBusy || csvParsing}
+                >
+                  別のCSVを選び直す
+                </button>
+              </div>
+            )}
+            <input
+              ref={csvInputRef}
+              type='file'
+              accept='.csv,text/csv'
+              className={`csv-import-input${csvHasPreview ? ' csv-import-input--hidden' : ''}`}
+              onChange={handleCsvFileChange}
+              disabled={csvBusy || csvParsing}
+            />
+            {csvParsing && <div className='csv-import-meta'>解析中...</div>}
+            {csvError && <div className='form-error'>{csvError}</div>}
+            <div className='csv-preview-panel'>
+              <div className='csv-preview'>
+                {csvPreviewRows.length === 0 ? (
+                  <div className='csv-preview__empty'>
+                    CSVファイルをアップロードするとプレビューが表示されます。
+                  </div>
+                ) : (
+                  <>
+                    {csvPreviewRows.map((row, index) => (
+                      <div key={`${row.phrase}-${index}`} className='csv-preview__row'>
+                        <div className='csv-preview__phrase'>{row.phrase}</div>
+                        {row.meaning && <div className='csv-preview__detail'>{row.meaning}</div>}
+                        {row.example && <div className='csv-preview__detail muted'>Tips: {row.example}</div>}
+                        {row.source && <div className='csv-preview__detail muted'>Source: {row.source}</div>}
+                      </div>
+                    ))}
+                    {csvRemaining > 0 && (
+                      <div className='csv-preview__more'>他{csvRemaining}件...</div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            <div className='modal-actions csv-import-actions'>
+              <button
+                type='button'
+                className='btn'
+                onClick={closeCsvModal}
+                disabled={csvBusy}
+              >
+                キャンセル
+              </button>
+              <button
+                type='button'
+                className='btn btn-primary'
+                onClick={onImportCsv}
+                disabled={csvBusy || !csvRows.length || csvParsing}
+              >
+                {csvActionLabel}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {newWordOpen && (
         <Modal title='Add New Card' onClose={closeNewWord}>
@@ -388,7 +559,7 @@ function DictionaryIcon(){
 function Modal({ title, onClose, children }: { title: string; onClose: ()=>void; children: ReactNode }){
   return (
     <div className='modal-overlay' role='dialog' aria-modal='true' aria-label={title} onClick={onClose}>
-      <div className='modal-card' onClick={e=> e.stopPropagation()}>
+      <div className='modal-surface' onClick={e=> e.stopPropagation()}>
         <div className='modal-header'>
           <div className='modal-title'>{title}</div>
           <button type='button' className='modal-close' onClick={onClose} aria-label='Close'>
@@ -429,4 +600,49 @@ function startOfDay(date: Date){
   const d = new Date(date)
   d.setHours(0,0,0,0)
   return d
+}
+
+function buildImportRowsFromCsv(table: string[][]): ImportRow[] {
+  if (!table.length) throw new Error('CSV_NO_DATA')
+  const headers = table[0].map(cell => cell.trim().toLowerCase())
+  const phraseIdx = headers.indexOf('phrase')
+  if (phraseIdx < 0) throw new Error('CSV_MISSING_PHRASE')
+  const meaningIdx = headers.indexOf('meaning')
+  const tipsIdx = headers.findIndex(h => h === 'tips' || h === 'tip' || h === 'example' || h === 'examples')
+  const sourceIdx = headers.indexOf('source')
+  const rows: ImportRow[] = []
+  for (let i = 1; i < table.length; i += 1){
+    const row = table[i]
+    const phrase = csvSafeCell(row, phraseIdx)
+    if (!phrase) continue
+    const entry: ImportRow = { phrase }
+    const meaning = csvSafeCell(row, meaningIdx)
+    if (meaning) entry.meaning = meaning
+    const tips = csvSafeCell(row, tipsIdx)
+    if (tips) entry.example = tips
+    const source = csvSafeCell(row, sourceIdx)
+    if (source) entry.source = source
+    rows.push(entry)
+  }
+  if (!rows.length) throw new Error('CSV_NO_ROWS')
+  return rows
+}
+
+function csvSafeCell(row: string[], idx: number): string {
+  if (idx < 0 || idx >= row.length) return ''
+  return row[idx]?.trim() ?? ''
+}
+
+function describeCsvError(error: unknown): string {
+  const code = error instanceof Error ? error.message : ''
+  switch (code) {
+    case 'CSV_NO_DATA':
+      return 'CSVファイルにデータが含まれていません。'
+    case 'CSV_MISSING_PHRASE':
+      return 'phrase列が見つかりません。ヘッダーをご確認ください。'
+    case 'CSV_NO_ROWS':
+      return '有効な行が見つかりませんでした。phraseが空の行は無視されます。'
+    default:
+      return 'CSVの読み込みに失敗しました。形式をご確認ください。'
+  }
 }

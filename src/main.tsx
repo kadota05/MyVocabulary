@@ -3,8 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App'
 import Home from './pages/Home'
-import Calendar from './pages/Calendar'
-import CalendarAddEvent from './pages/CalendarAddEvent'
 import LeapSession from './pages/LeapSession'
 import LeapSetup from './pages/LeapSetup'
 import Review from './pages/Review'
@@ -22,8 +20,6 @@ root.render(
           <Route path="/leap" element={<LeapSetup />} />
           <Route path="/leap/session" element={<LeapSession />} />
           <Route path="/words" element={<Words />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/calendar/add" element={<CalendarAddEvent />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

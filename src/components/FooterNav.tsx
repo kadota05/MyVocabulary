@@ -8,9 +8,9 @@ const navItems = [
     icon: <MortarboardIcon />
   },
   {
-    to: '/calendar',
-    label: 'Calendar',
-    icon: <CalendarIcon />
+    to: '/leap',
+    label: 'Leap',
+    icon: <LeapIcon />
   },
   {
     to: '/settings',
@@ -19,7 +19,7 @@ const navItems = [
   }
 ]
 
-const visibleRoutes = ['/', '/calendar', '/settings']
+const visibleRoutes = ['/', '/leap', '/settings']
 
 export default function FooterNav() {
   const location = useLocation()
@@ -65,7 +65,7 @@ function MortarboardIcon() {
   )
 }
 
-function CalendarIcon() {
+function LeapIcon() {
   return (
     <svg
       width='28'
@@ -78,16 +78,10 @@ function CalendarIcon() {
       strokeLinejoin='round'
       aria-hidden='true'
     >
-      <rect x='3.5' y='4.5' width='17' height='16' rx='2.5' />
-      <line x1='8' y1='3' x2='8' y2='6.5' />
-      <line x1='16' y1='3' x2='16' y2='6.5' />
-      <line x1='3.5' y1='9.5' x2='20.5' y2='9.5' />
-      <path d='M8.25 13h.01' />
-      <path d='M12 13h.01' />
-      <path d='M15.75 13h.01' />
-      <path d='M8.25 16.5h.01' />
-      <path d='M12 16.5h.01' />
-      <path d='M15.75 16.5h.01' />
+      <path d='M4 16.5c0-3.59 2.91-6.5 6.5-6.5H14a5.5 5.5 0 0 1 5.5 5.5' />
+      <path d='M4 20h8.5' />
+      <path d='M12 4l3-3v6z' />
+      <path d='M9.5 12.5l3 3 4-4' />
     </svg>
   )
 }

@@ -56,6 +56,19 @@ export default function LeapSession() {
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null)
 
   useEffect(() => {
+    if (typeof document === 'undefined') return
+    const { body, documentElement } = document
+    const prevBodyOverflow = body.style.overflow
+    const prevRootOverflow = documentElement.style.overflow
+    body.style.overflow = 'hidden'
+    documentElement.style.overflow = 'hidden'
+    return () => {
+      body.style.overflow = prevBodyOverflow
+      documentElement.style.overflow = prevRootOverflow
+    }
+  }, [])
+
+  useEffect(() => {
     if (!config) {
       nav('/leap')
     }

@@ -1030,6 +1030,17 @@ export default function CalendarAddEvent() {
               </>
             )}
             
+            {!isEditingTemplate && (
+              <button
+                type="button"
+                className="calendar-template-detail__cta calendar-template-detail__cta--fixed"
+                onClick={handleAdd}
+                disabled={editingActivities.filter(a => a.enabled).length === 0}
+              >
+                予定をカレンダーに追加
+              </button>
+            )}
+            
             {activeTimePicker && (
               <InputDateByScrollPicker
                 value={parseTimeStringToDate(
@@ -1326,21 +1337,6 @@ export default function CalendarAddEvent() {
           />
         )}
       </main>
-      
-      {selectedTemplate && !isEditingTemplate && (
-        <div className="calendar-template-detail__footer">
-          <div className="calendar-template-detail__footer-inner">
-            <button
-              type="button"
-              className="calendar-template-detail__cta calendar-template-detail__cta--footer"
-              onClick={handleAdd}
-              disabled={editingActivities.filter(a => a.enabled).length === 0}
-            >
-              予定をカレンダーに追加
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
