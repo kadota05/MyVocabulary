@@ -235,31 +235,27 @@ export default function Review() {
           </div>
         ) : (
           <div className='review-face back' style={{ gap:16 }}>
-            <div className='review-extra' style={{ display:'flex', flexDirection:'column', gap:4 }}>
-              <span className='muted' style={{ fontSize:12, letterSpacing:'0.12em', textTransform:'uppercase' }}>Source</span>
-              {current.source
-                ? isHttpUrl(current.source)
-                  ? (
-                    <a
-                      href={current.source}
-                      target='_blank'
-                      rel='noopener noreferrer'
-                      onClick={event => event.stopPropagation()}
-                    >
-                      {current.source}
-                    </a>
-                    )
-                  : current.source
-                : <span>-</span>}
+            <div className='review-source-row'>
+              <div className='review-source-content'>
+                <span className='review-source-hash'>#</span>
+                {current.source
+                  ? isHttpUrl(current.source)
+                    ? (
+                      <a
+                        href={current.source}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        onClick={event => event.stopPropagation()}
+                      >
+                        {current.source}
+                      </a>
+                      )
+                    : current.source
+                  : <span>-</span>}
+              </div>
             </div>
-            <div className='review-meaning' style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <span className='muted' style={{ fontSize:12, letterSpacing:'0.12em', textTransform:'uppercase' }}>Meaning</span>
-              <div>{current.meaning || '-'}</div>
-            </div>
-            <div className='review-extra' style={{ display:'flex', flexDirection:'column', gap:4 }}>
-              <span className='muted' style={{ fontSize:12, letterSpacing:'0.12em', textTransform:'uppercase' }}>Tips</span>
-              {current.example ? current.example : <span>-</span>}
-            </div>
+            <div className='review-meaning-line'>{current.meaning || '-'}</div>
+            <div className='review-tips-row'>{current.example || '-'}</div>
           </div>
         )}
       </div>

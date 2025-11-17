@@ -141,11 +141,16 @@ export default function Words(){
                         </button>
                       </div>
                     </div>
-                    <div style={{ marginTop:4 }}>{w.meaning || '-'}</div>
-                    {w.example && <div className='muted' style={{ marginTop:4 }}>{w.example}</div>}
+                    <div className='word-card__meaning'>{w.meaning || '-'}</div>
+                    {w.example && (
+                      <div className='word-card__tips'>
+                        <TipsIcon />
+                        <span>{w.example}</span>
+                      </div>
+                    )}
                     {w.source && (
-                      <div className='muted word-card__source' style={{ marginTop:4 }}>
-                        Source:{' '}
+                      <div className='word-card__source'>
+                        <SourceIcon />
                         {sourceLink ? (
                           <a
                             className='word-card__source-link'
@@ -233,6 +238,49 @@ function CloseIcon(){
     <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
       <line x1='18' y1='6' x2='6' y2='18' />
       <line x1='6' y1='6' x2='18' y2='18' />
+    </svg>
+  )
+}
+
+function TipsIcon() {
+  return (
+    <svg
+      className='word-card__icon'
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+    >
+      <path d='M9 18h6' />
+      <path d='M10 22h4' />
+      <path d='M12 2a7 7 0 0 0-4.73 11.95c.43.4.73.93.81 1.52l.19 1.53h3.48' />
+      <path d='M12 2a7 7 0 0 1 4.73 11.95c-.43.4-.73.93-.81 1.52l-.19 1.53H12' />
+    </svg>
+  )
+}
+
+function SourceIcon() {
+  return (
+    <svg
+      className='word-card__icon'
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+    >
+      <path d='M10 13a5 5 0 0 1 7 7l-3 3a5 5 0 0 1-7-7l1.5-1.5' />
+      <path d='m14 11 5-5' />
+      <path d='m19 10 1-1a3 3 0 0 0-4-4l-1 1' />
     </svg>
   )
 }

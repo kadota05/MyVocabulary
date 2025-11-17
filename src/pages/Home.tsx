@@ -415,9 +415,19 @@ export default function Home(){
                     {csvPreviewRows.map((row, index) => (
                       <div key={`${row.phrase}-${index}`} className='csv-preview__row'>
                         <div className='csv-preview__phrase'>{row.phrase}</div>
-                        {row.meaning && <div className='csv-preview__detail'>{row.meaning}</div>}
-                        {row.example && <div className='csv-preview__detail muted'>Tips: {row.example}</div>}
-                        {row.source && <div className='csv-preview__detail muted'>Source: {row.source}</div>}
+                        {row.meaning && <div className='csv-preview__meaning'>{row.meaning}</div>}
+                        {row.example && (
+                          <div className='csv-preview__tips'>
+                            <TipsIconSmall />
+                            <span>{row.example}</span>
+                          </div>
+                        )}
+                        {row.source && (
+                          <div className='csv-preview__source'>
+                            <SourceIconSmall />
+                            <span>{row.source}</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {csvRemaining > 0 && (
@@ -600,6 +610,49 @@ function startOfDay(date: Date){
   const d = new Date(date)
   d.setHours(0,0,0,0)
   return d
+}
+
+function TipsIconSmall() {
+  return (
+    <svg
+      className='csv-preview__icon'
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+    >
+      <path d='M9 18h6' />
+      <path d='M10 22h4' />
+      <path d='M12 2a7 7 0 0 0-4.73 11.95c.43.4.73.93.81 1.52l.19 1.53h3.48' />
+      <path d='M12 2a7 7 0 0 1 4.73 11.95c-.43.4-.73.93-.81 1.52l-.19 1.53H12' />
+    </svg>
+  )
+}
+
+function SourceIconSmall() {
+  return (
+    <svg
+      className='csv-preview__icon'
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+    >
+      <path d='M10 13a5 5 0 0 1 7 7l-3 3a5 5 0 0 1-7-7l1.5-1.5' />
+      <path d='m14 11 5-5' />
+      <path d='m19 10 1-1a3 3 0 0 0-4-4l-1 1' />
+    </svg>
+  )
 }
 
 function buildImportRowsFromCsv(table: string[][]): ImportRow[] {
