@@ -31,6 +31,7 @@ export default function Home(){
   const [csvParsing, setCsvParsing] = useState(false)
   const [csvProgress, setCsvProgress] = useState<{done:number; total:number}>({ done:0, total:0 })
   const [summary, setSummary] = useState<WordSummary>({ total:0, learning:0, learned:0, firstCreatedAt: null })
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const phraseInputRef = useRef<HTMLInputElement|null>(null)
   const csvInputRef = useRef<HTMLInputElement|null>(null)
 
@@ -102,6 +103,12 @@ export default function Home(){
 
   useEffect(()=>{ void refreshStats() },[refreshStats])
 
+  useEffect(()=> {
+    if (!importSuccess) return
+    const timer = window.setTimeout(()=> setImportSuccess(null), 6000)
+    return ()=> window.clearTimeout(timer)
+  },[importSuccess])
+
   const dayCount = useMemo(()=> calculateDayCount(summary.firstCreatedAt), [summary.firstCreatedAt])
   const dayCountFormatted = dayCount > 0 ? dayCount.toLocaleString('en-US') : ''
   const dayLine = dayCount > 0 ? `Day ${dayCountFormatted}` : 'Waiting for your first sync'
@@ -170,7 +177,8 @@ export default function Home(){
       setProgress({ done:0, total })
       setPhase('insert')
       const stats = await importRows(rows, (done,total)=> setProgress({ done, total }))
-      toast(`Imported ${stats.added} • Skipped ${stats.skipped} • Failed ${stats.failed}`)
+      const message = `Imported ${stats.added} • Skipped ${stats.skipped} • Failed ${stats.failed}`
+      setImportSuccess(message)
       await refreshStats()
     } catch(e:any){
       const msg = String(e?.message || e)
@@ -232,7 +240,8 @@ export default function Home(){
     setCsvProgress({ done:0, total:csvRows.length })
     try{
       const stats = await importRows(csvRows, (done,total)=> setCsvProgress({ done, total }))
-      toast(`Imported ${stats.added} • Skipped ${stats.skipped} • Failed ${stats.failed}`)
+      const message = `Imported ${stats.added} • Skipped ${stats.skipped} • Failed ${stats.failed}`
+      setImportSuccess(message)
       await refreshStats()
       setCsvModalOpen(false)
       resetCsvImport()
@@ -375,11 +384,16 @@ export default function Home(){
           >
             Add Card
           </button>
-      </div>
-      <button
-        type='button'
-        className='fab-toggle'
-        aria-label='Actions menu'
+        </div>
+        {importSuccess && (
+          <div className='fab-message' role='status' aria-live='polite'>
+            {importSuccess}
+          </div>
+        )}
+        <button
+          type='button'
+          className='fab-toggle'
+          aria-label='Actions menu'
           aria-expanded={fabOpen}
           onClick={()=> setFabOpen(o=>!o)}
         >
@@ -456,19 +470,19 @@ export default function Home(){
             <div className='modal-actions csv-import-actions'>
               <button
                 type='button'
-                className='btn'
-                onClick={closeCsvModal}
-                disabled={csvBusy}
-              >
-                キャンセル
-              </button>
-              <button
-                type='button'
                 className='btn btn-primary'
                 onClick={onImportCsv}
                 disabled={csvBusy || !csvRows.length || csvParsing}
               >
                 {csvActionLabel}
+              </button>
+              <button
+                type='button'
+                className='btn'
+                onClick={closeCsvModal}
+                disabled={csvBusy}
+              >
+                キャンセル
               </button>
             </div>
           </div>

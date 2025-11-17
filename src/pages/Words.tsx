@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { deleteWord, getAllWords, updateWord, type WordWithSrs } from '~/db/sqlite'
 
@@ -13,6 +13,7 @@ export default function Words(){
   const [edit, setEdit] = useState<{ phrase: string; meaning: string; example: string; source: string }>(EMPTY_EDIT)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editBusy, setEditBusy] = useState(false)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(()=> new Set())
 
   useEffect(()=> {
     (async()=>{
@@ -91,6 +92,29 @@ export default function Words(){
     }
   }
 
+  const toggleCard = (id: string)=>{
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleCardClick = (event: MouseEvent<HTMLDivElement>, id: string)=>{
+    const target = event.target
+    if (target instanceof Element && (target.closest('button') || target.closest('a'))) return
+    toggleCard(id)
+  }
+
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, id: string)=>{
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' '){
+      event.preventDefault()
+      toggleCard(id)
+    }
+  }
+
   return (
     <div className='home-screen words-screen'>
       <header className='home-header leap-header'>
@@ -125,50 +149,66 @@ export default function Words(){
             {filtered.map(w=> {
               const sourceLink = w.source ? getSourceUrl(w.source) : null
               const isEditing = editId === w.id
+              const isExpanded = expandedIds.has(w.id)
               return (
                 <div key={w.id} className='card'>
-                  <div className='word-card__body'>
+                  <div
+                    className={`word-card__body ${isExpanded ? 'word-card__body--expanded' : 'word-card__body--collapsed'}`}
+                    tabIndex={0}
+                    aria-label={`Word details for ${w.phrase}`}
+                    aria-expanded={isExpanded}
+                    onClick={event=> handleCardClick(event, w.id)}
+                    onKeyDown={event=> handleCardKeyDown(event, w.id)}
+                  >
                     <div className='row word-card__header'>
                       <div className='word-card__phrase'>{w.phrase}</div>
                       <div className='word-card__actions'>
-                        <button className='word-card__action' onClick={()=> startEdit(w)} disabled={editBusy && isEditing}>Edit</button>
+                        <button className='word-card__action' onClick={event=> { event.stopPropagation(); startEdit(w) }} disabled={editBusy && isEditing}>Edit</button>
                         <button
                           className='word-card__action word-card__action--danger'
-                          onClick={()=> requestDelete(w)}
+                          onClick={event=> { event.stopPropagation(); void requestDelete(w) }}
                           disabled={deletingId === w.id}
                         >
                           {deletingId === w.id ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
                     </div>
-                    <div className='word-card__meaning'>{w.meaning || '-'}</div>
-                    {w.example && (
-                      <div className='word-card__tips'>
-                        <TipsIcon />
-                        <span>{w.example}</span>
-                      </div>
-                    )}
-                    {w.source && (
-                      <div className='word-card__source'>
-                        <SourceIcon />
-                        {sourceLink ? (
-                          <a
-                            className='word-card__source-link'
-                            href={sourceLink}
-                            target='_blank'
-                            rel='noopener noreferrer'
-                          >
-                            {w.source}
-                          </a>
-                        ) : (
-                          w.source
-                        )}
-                      </div>
-                    )}
-                    <div className='word-card__footer'>
-                      <div className='word-card__stats muted'>reps {w.reps} / lapses {w.lapses} / stability {Number(w.stability || 0).toFixed(2)}</div>
-                      <div className='word-card__next muted'>Next review: {w.nextDueDate || '-'}</div>
+                    <div className='word-card__meaning-row'>
+                      <div className='word-card__meaning'>{w.meaning || '-'}</div>
+                      <ChevronIcon expanded={isExpanded} />
                     </div>
+                    {isExpanded && (
+                      <div className='word-card__details'>
+                        {w.example && (
+                          <div className='word-card__tips'>
+                            <TipsIcon />
+                            <span>{w.example}</span>
+                          </div>
+                        )}
+                        {w.source && (
+                          <div className='word-card__source'>
+                            <SourceIcon />
+                            {sourceLink ? (
+                              <a
+                                className='word-card__source-link'
+                                href={sourceLink}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                onClick={event=> event.stopPropagation()}
+                              >
+                                {w.source}
+                              </a>
+                            ) : (
+                              w.source
+                            )}
+                          </div>
+                        )}
+                        <div className='word-card__footer'>
+                          <div className='word-card__stats muted'>reps {w.reps} / lapses {w.lapses} / stability {Number(w.stability || 0).toFixed(2)}</div>
+                          <div className='word-card__next muted'>Next review: {w.nextDueDate || '-'}</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -281,6 +321,26 @@ function SourceIcon() {
       <path d='M10 13a5 5 0 0 1 7 7l-3 3a5 5 0 0 1-7-7l1.5-1.5' />
       <path d='m14 11 5-5' />
       <path d='m19 10 1-1a3 3 0 0 0-4-4l-1 1' />
+    </svg>
+  )
+}
+
+function ChevronIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      className={`word-card__chevron${expanded ? ' word-card__chevron--expanded' : ''}`}
+      width='18'
+      height='18'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      aria-hidden='true'
+      focusable='false'
+    >
+      <polyline points='6 9 12 15 18 9' />
     </svg>
   )
 }
