@@ -5,12 +5,15 @@ import { addWord, getWordSummary, importRows, type ImportRow, type WordSummary }
 import { parseCsv } from '~/lib/csv'
 import { ensureGoogleLoaded, fetchFirstTableRows } from '~/lib/google'
 import { useImportSettings } from '~/state/importSettings'
+import { useStore } from '~/state/store'
 
 type Phase = 'idle' | 'auth' | 'fetch' | 'parse' | 'insert'
 
 export default function Home(){
   const nav = useNavigate()
   const { clientId, docId } = useImportSettings()
+  const cardOrder = useStore(state => state.cardOrder)
+  const toggleCardOrder = useStore(state => state.toggleCardOrder)
   const [busy, setBusy] = useState(false)
   const [phase, setPhase] = useState<Phase>('idle')
   const [progress, setProgress] = useState<{done:number; total:number}>({ done:0, total:0 })
@@ -110,6 +113,7 @@ export default function Home(){
   const csvHasPreview = csvRows.length > 0
   const csvActionLabel = csvBusy ? `追加中 ${csvProgress.done}/${csvProgress.total || csvRows.length}` : '追加する'
   const csvLayoutClass = ['col', 'csv-import-layout', csvHasPreview ? 'has-preview' : ''].filter(Boolean).join(' ')
+  const cardOrderLabel = cardOrder === 'phrase-first' ? 'Phrase → Meaning' : 'Meaning → Phrase'
 
   function resetNewWord(){
     setNewWord({ phrase:'', meaning:'', example:'', source:'' })
@@ -294,6 +298,18 @@ export default function Home(){
       <header className='home-header'>
         <div className='home-header__brand'>MyVocabulary</div>
         <div className='home-header__actions'>
+          <button
+            type='button'
+            className='icon-button card-order-toggle'
+            onClick={toggleCardOrder}
+            aria-label={`Switch review cards to ${cardOrder === 'phrase-first' ? 'Meaning → Phrase' : 'Phrase → Meaning'}`}
+            aria-pressed={cardOrder === 'meaning-first'}
+            title={`Review order: ${cardOrderLabel}`}
+          >
+            <span className='card-order-toggle__text' aria-hidden='true'>
+              {cardOrder === 'phrase-first' ? 'P→M' : 'M→P'}
+            </span>
+          </button>
           <button
             type='button'
             className='icon-button'

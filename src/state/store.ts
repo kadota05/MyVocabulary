@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { applyReview, DueCard, getDueCards, Grade, todayYMD } from '~\/db/sqlite'
 
+type CardOrder = 'phrase-first' | 'meaning-first'
+
 type State = {
   today: string
   remaining: DueCard[]
@@ -9,9 +11,33 @@ type State = {
   currentSide?: 'left'|'right'
   flipped: boolean
   loading: boolean
+  cardOrder: CardOrder
   startToday: () => Promise<void>
   flip: () => void
+  setCardOrder: (value: CardOrder) => void
+  toggleCardOrder: () => void
   grade: (g: Grade) => Promise<void>
+}
+
+const CARD_ORDER_STORAGE_KEY = 'review:cardOrder'
+
+function getInitialCardOrder(): CardOrder {
+  if (typeof window === 'undefined') return 'phrase-first'
+  try{
+    const stored = window.localStorage.getItem(CARD_ORDER_STORAGE_KEY)
+    return stored === 'meaning-first' ? 'meaning-first' : 'phrase-first'
+  } catch {
+    return 'phrase-first'
+  }
+}
+
+function persistCardOrder(value: CardOrder){
+  if (typeof window === 'undefined') return
+  try{
+    window.localStorage.setItem(CARD_ORDER_STORAGE_KEY, value)
+  } catch {
+    // Ignore localStorage failures
+  }
 }
 
 export const useStore = create<State>((set, get)=> ({
@@ -22,6 +48,7 @@ export const useStore = create<State>((set, get)=> ({
   currentSide: undefined,
   flipped: false,
   loading: false,
+  cardOrder: getInitialCardOrder(),
   startToday: async () => {
     set({ loading: true })
     const today = todayYMD()
@@ -33,6 +60,15 @@ export const useStore = create<State>((set, get)=> ({
     set({ today, remaining: leftOut, again: rightOut, current: next, currentSide: side, flipped: false, loading: false })
   },
   flip: () => set(s=> ({ flipped: !s.flipped })),
+  setCardOrder: (value: CardOrder) => {
+    set({ cardOrder: value, flipped: false })
+    persistCardOrder(value)
+  },
+  toggleCardOrder: () => {
+    const next = get().cardOrder === 'phrase-first' ? 'meaning-first' : 'phrase-first'
+    set({ cardOrder: next, flipped: false })
+    persistCardOrder(next)
+  },
   grade: async (g: Grade) => {
     const { current, currentSide, remaining, again, today } = get()
     if (!current) return

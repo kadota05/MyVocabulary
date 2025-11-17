@@ -129,6 +129,8 @@
 .icon-button{ appearance:none; width:48px; height:48px; border-radius:9999px; border:1px solid rgba(51,65,85,.6); background:rgba(17,24,39,.85); color:var(--fg); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .18s ease, border-color .18s ease, transform .18s ease; }
 .icon-button:hover{ background:rgba(30,41,59,.95); border-color:#334155; }
 .icon-button:active{ transform:scale(0.95); }
+.icon-button.card-order-toggle{ width:auto; min-width:48px; padding:0 14px; font-size:12px; font-weight:600; letter-spacing:0.08em; }
+.card-order-toggle__text{ display:block; line-height:1.1; text-align:center; }
 .home-settings{ max-width:min(520px,100%); margin:0 auto; gap:12px; backdrop-filter:blur(8px); }
 .settings-title{ font-weight:700; font-size:16px; color:var(--fg); }
 .circle-hero{ flex:1; display:flex; align-items:center; justify-content:center; padding:clamp(8px, 4vh, 32px) 0; width:100%; }

@@ -23,7 +23,8 @@ export default function Review() {
     again,
     loading,
     startToday,
-    grade
+    grade,
+    cardOrder
   } = useStore(state => ({
     current: state.current,
     currentSide: state.currentSide,
@@ -31,7 +32,8 @@ export default function Review() {
     again: state.again,
     loading: state.loading,
     startToday: state.startToday,
-    grade: state.grade
+    grade: state.grade,
+    cardOrder: state.cardOrder
   }))
 
   const [initialized, setInitialized] = useState(false)
@@ -79,6 +81,10 @@ export default function Review() {
   useLayoutEffect(() => {
     setFlipped(false)
   }, [current?.id])
+
+  useEffect(() => {
+    setFlipped(false)
+  }, [cardOrder])
 
   useEffect(() => {
     const available =
@@ -216,6 +222,9 @@ export default function Review() {
 
   const cardContent = useMemo(() => {
     if (!current) return null
+    const promptText = cardOrder === 'phrase-first' ? current.phrase : (current.meaning || '-')
+    const answerText = cardOrder === 'phrase-first' ? (current.meaning || '-') : (current.phrase || '-')
+
     return (
       <div
         className='card tap review-card'
@@ -231,7 +240,7 @@ export default function Review() {
       >
         {!flipped ? (
           <div className='review-face main'>
-            <div>{current.phrase}</div>
+            <div>{promptText}</div>
           </div>
         ) : (
           <div className='review-face back' style={{ gap:16 }}>
@@ -254,13 +263,13 @@ export default function Review() {
                   : <span>-</span>}
               </div>
             </div>
-            <div className='review-meaning-line'>{current.meaning || '-'}</div>
+            <div className='review-meaning-line'>{answerText}</div>
             <div className='review-tips-row'>{current.example || '-'}</div>
           </div>
         )}
       </div>
     )
-  }, [current, flipped])
+  }, [cardOrder, current, flipped])
 
   const voiceOptions = useMemo(() => {
     if (!availableVoices.length) return []
