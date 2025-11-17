@@ -1,7 +1,7 @@
 import { FormEvent, KeyboardEvent, MouseEvent, PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '~/components/Toast'
-import { useLeapStore } from '~/state/leap'
+import { useLeapStore, type LeapPromptMode } from '~/state/leap'
 
 const CHUNK_SIZE = 100
 type FormDefaults = {
@@ -9,6 +9,7 @@ type FormDefaults = {
   endIndex: string
   addWrongToWordlist: boolean
   order: 'random' | 'number'
+  promptMode: LeapPromptMode
 }
 
 export default function LeapSetup() {
@@ -41,6 +42,7 @@ export default function LeapSetup() {
   const [endIndex, setEndIndex] = useState('')
   const [addWrongToWordlist, setAddWrongToWordlist] = useState(false)
   const [order, setOrder] = useState<'random' | 'number'>('random')
+  const [promptMode, setPromptMode] = useState<LeapPromptMode>('en-first')
   const [submitBusy, setSubmitBusy] = useState(false)
   const [errors, setErrors] = useState<{ start?: string; end?: string }>({})
   const [selectedHeadings, setSelectedHeadings] = useState<Set<number>>(() => new Set<number>())
@@ -56,7 +58,8 @@ export default function LeapSetup() {
     startIndex: '',
     endIndex: '',
     addWrongToWordlist: false,
-    order: 'random'
+    order: 'random',
+    promptMode: 'en-first'
   })
   const skipClickRef = useRef(false)
   const manualOverridesRef = useRef<Map<number, boolean>>(new Map())
@@ -67,7 +70,8 @@ export default function LeapSetup() {
       startIndex: '',
       endIndex: '',
       addWrongToWordlist: false,
-      order: 'random'
+      order: 'random',
+      promptMode: 'en-first'
     }
     defaultFormRef.current = blankDefaults
     applyFormDefaults(blankDefaults)
@@ -83,7 +87,8 @@ export default function LeapSetup() {
       startIndex: String(config.startIndex),
       endIndex: String(config.endIndex),
       addWrongToWordlist: config.addWrongToWordlist,
-      order: config.order
+      order: config.order,
+      promptMode: config.promptMode
     }
     defaultFormRef.current = defaults
     applyFormDefaults(defaults)
@@ -220,6 +225,8 @@ export default function LeapSetup() {
     ? `${currentChunkRange.start.toLocaleString('ja-JP')}~${currentChunkRange.end.toLocaleString('ja-JP')}`
     : ''
   const chunkSizeLabel = CHUNK_SIZE.toLocaleString('ja-JP')
+  const promptModeLabel = promptMode === 'en-first' ? 'EN→JP' : 'JP→EN'
+  const promptModeNextLabel = promptMode === 'en-first' ? 'JP→EN' : 'EN→JP'
   const emptyMessage =
     previewMode === 'selected'
       ? '選択中の単語がありません。'
@@ -317,6 +324,7 @@ export default function LeapSetup() {
     setEndIndex(defaults.endIndex)
     setAddWrongToWordlist(defaults.addWrongToWordlist)
     setOrder(defaults.order)
+    setPromptMode(defaults.promptMode)
     setSelectedHeadings(new Set<number>())
     setPendingSyncRange(true)
     setHasAppliedSelection(false)
@@ -329,6 +337,10 @@ export default function LeapSetup() {
   function handleReset() {
     applyFormDefaults(defaultFormRef.current)
   }
+
+  const togglePromptMode = useCallback(() => {
+    setPromptMode(value => (value === 'en-first' ? 'jp-first' : 'en-first'))
+  }, [])
 
   function handleStartChange(value: string) {
     setStartIndex(value)
@@ -434,7 +446,8 @@ export default function LeapSetup() {
           startIndex: start ?? 1,
           endIndex: end ?? (availableHeadings || 1),
           order,
-          addWrongToWordlist
+          addWrongToWordlist,
+          promptMode
         },
         selectedWords
       )
@@ -452,18 +465,25 @@ export default function LeapSetup() {
     <div className='home-screen leap-setup-screen'>
       <header className='home-header leap-header'>
         <div className='home-header__brand'>必携英単語Leap</div>
-        <div className='home-header__actions'>
-          <button className='icon-button' onClick={() => nav('/')} aria-label='Back to home'>
-            <CloseIcon />
-          </button>
-        </div>
       </header>
 
       <main className='leap-setup-main'>
         <div className='leap-setup-grid'>
           <form className='leap-setup-form' onSubmit={handleSubmit}>
             <section className='card leap-control-card'>
-              <h2 className='leap-control-title'>出題設定</h2>
+              <div className='leap-title-row'>
+                <h2 className='leap-control-title'>出題設定</h2>
+                <button
+                  type='button'
+                  className='icon-button card-order-toggle'
+                  onClick={togglePromptMode}
+                  aria-label={`Switch prompt order to ${promptModeNextLabel}`}
+                  aria-pressed={promptMode === 'jp-first'}
+                  title={`Prompt order: ${promptModeLabel}`}
+                >
+                  <span className='card-order-toggle__text' aria-hidden='true'>{promptModeLabel}</span>
+                </button>
+              </div>
               <div className='leap-range-line'>
                 <span className='leap-range-label'>見出し番号:</span>
                 <div className='leap-range-stack'>
@@ -640,15 +660,6 @@ export default function LeapSetup() {
         </div>
       </main>
     </div>
-  )
-}
-
-function CloseIcon() {
-  return (
-    <svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round' aria-hidden='true'>
-      <line x1='18' y1='6' x2='6' y2='18' />
-      <line x1='6' y1='6' x2='18' y2='18' />
-    </svg>
   )
 }
 

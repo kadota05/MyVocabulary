@@ -210,8 +210,13 @@ export default function LeapSession() {
     [availableVoices, preferredVoiceURI]
   )
 
+  const promptModeSetting = config?.promptMode ?? 'en-first'
+
   const cardContent = useMemo(() => {
     if (!current) return null
+    const showEnglishPrompt = promptModeSetting === 'en-first'
+    const promptText = showEnglishPrompt ? current.phrase : (current.meaning || '-')
+    const answerText = showEnglishPrompt ? (current.meaning || '-') : current.phrase
     return (
       <div
         className='card tap review-card'
@@ -228,7 +233,7 @@ export default function LeapSession() {
         {!flipped ? (
           <div className='review-face main'>
             <span className='muted' style={{ fontSize:14, letterSpacing:'0.08em', display:'block', marginBottom:12 }}>#{current.heading}</span>
-            <div>{current.phrase}</div>
+            <div>{promptText}</div>
           </div>
         ) : (
           <div className='review-face back'>
@@ -250,12 +255,12 @@ export default function LeapSession() {
               </div>
             )}
             {current.example && <div className='review-extra'>{current.example}</div>}
-            <div className='review-meaning'>{current.meaning || '-'}</div>
+            <div className='review-meaning'>{answerText || '-'}</div>
           </div>
         )}
       </div>
     )
-  }, [current, flipped])
+  }, [current, flipped, promptModeSetting])
 
   const voiceOptions = useMemo(() => {
     if (!availableVoices.length) return []

@@ -282,6 +282,8 @@
 .leap-setup-grid{width:100%; max-width:1080px; display:flex; gap:28px; align-items:flex-start; justify-content:center; margin:0 auto;}
 .leap-setup-form{flex:0 0 440px; width:100%; max-width:440px; display:flex; flex-direction:column; gap:20px;}
 .leap-control-card{display:flex; flex-direction:column; gap:20px; padding:24px; background:rgba(21,31,55,.94); border:1px solid rgba(56,189,248,.18);}
+.leap-title-row{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+.leap-title-row .card-order-toggle{flex-shrink:0;}
 .leap-control-title{margin:0; font-size:18px; font-weight:700; letter-spacing:0.06em; color:var(--fg);}
 .leap-control-pill{font-size:13px; letter-spacing:0.04em; color:var(--muted); background:rgba(15,23,42,.75); border:1px solid rgba(51,65,85,.55); border-radius:999px; padding:6px 12px; white-space:nowrap;}
 .leap-range-line{display:flex; flex-direction:column; align-items:flex-start; gap:12px;}

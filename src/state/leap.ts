@@ -1,11 +1,14 @@
 import { create } from 'zustand'
 import { getLeapWordsInRange, loadLeapWords, type LeapOrder, type LeapWord } from '~/lib/leap'
 
+export type LeapPromptMode = 'en-first' | 'jp-first'
+
 export type LeapConfig = {
   startIndex: number
   endIndex: number
   order: LeapOrder
   addWrongToWordlist: boolean
+  promptMode: LeapPromptMode
 }
 
 type LeapState = {
