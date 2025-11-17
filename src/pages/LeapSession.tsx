@@ -238,7 +238,7 @@ export default function LeapSession() {
         ) : (
           <div className='review-face back'>
             {current.source && (
-              <div className='review-extra'>
+              <div className='review-extra review-extra--source'>
                 {' '}
                 {isHttpUrl(current.source) ? (
                   <a
