@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type KeyboardEvent,
@@ -54,6 +55,8 @@ export default function LeapSession() {
     }
   })
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null)
+  const [savedWordNotices, setSavedWordNotices] = useState<{ id: number; message: string }[]>([])
+  const savedNoticeTimers = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -83,6 +86,15 @@ export default function LeapSession() {
       'speechSynthesis' in window &&
       typeof SpeechSynthesisUtterance !== 'undefined'
     setSpeechAvailable(available)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      savedNoticeTimers.current.forEach(timer => {
+        clearTimeout(timer)
+      })
+      savedNoticeTimers.current = []
+    }
   }, [])
 
   useEffect(() => {
@@ -274,6 +286,18 @@ export default function LeapSession() {
   }, [availableVoices])
   const selectedVoiceURI = voice?.voiceURI ?? (voiceOptions[0]?.voiceURI ?? '')
 
+  const addSavedWordNotice = useCallback((message: string) => {
+    const id = Date.now() + Math.random()
+    setSavedWordNotices(prev => [...prev, { id, message }])
+    if (typeof window !== 'undefined') {
+      const timer = window.setTimeout(() => {
+        setSavedWordNotices(prev => prev.filter(entry => entry.id !== id))
+        savedNoticeTimers.current = savedNoticeTimers.current.filter(entry => entry !== timer)
+      }, 3500)
+      savedNoticeTimers.current.push(timer)
+    }
+  }, [])
+
   async function handleKnown() {
     if (busy || !current) return
     setFlipped(false)
@@ -294,11 +318,11 @@ export default function LeapSession() {
             example: wrongWord.example,
             source: wrongWord.source ?? `[Leap]見出し番号 ${wrongWord.heading}`
           })
-          toast(`「${wrongWord.phrase}」をWord Libraryへ追加しました。`)
+          addSavedWordNotice(`「${wrongWord.phrase}」をWord Libraryへ追加しました。`)
         } catch (error) {
           const message = error instanceof Error ? error.message : ''
           if (message === 'DUPLICATE_PHRASE') {
-            toast('既にWord Libraryに登録済みです。')
+            // Already registered; no notification required
           } else if (message === 'VALIDATION_EMPTY_PHRASE') {
             toast('単語の保存に失敗しました。')
           } else {
@@ -357,6 +381,13 @@ export default function LeapSession() {
       </header>
 
       <main className='leap-session-main'>
+        {savedWordNotices.length > 0 && (
+          <div className='leap-session-saved' aria-live='polite'>
+            {savedWordNotices.map(entry => (
+              <div key={entry.id} className='leap-session-saved__item'>{entry.message}</div>
+            ))}
+          </div>
+        )}
         {sessionFinished ? (
           <div className='card center leap-finished-card'>
             <div className='leap-finished-title'>お疲れさまでした！</div>
