@@ -56,7 +56,7 @@ export default function LeapSession() {
   })
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null)
   const [savedWordNotices, setSavedWordNotices] = useState<{ id: number; message: string }[]>([])
-  const savedNoticeTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const savedNoticeTimers = useRef<number[]>([])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -244,7 +244,7 @@ export default function LeapSession() {
       >
         {!flipped ? (
           <div className='review-face main'>
-            <span className='muted' style={{ fontSize:14, letterSpacing:'0.08em', display:'block', marginBottom:12 }}>#{current.heading}</span>
+            <span className='muted' style={{ fontSize: 14, letterSpacing: '0.08em', display: 'block', marginBottom: 12 }}>#{current.heading}</span>
             <div>{promptText}</div>
           </div>
         ) : (
@@ -426,10 +426,10 @@ export default function LeapSession() {
             </div>
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, width:'100%' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, width: '100%' }}>
             {cardContent}
             {speechAvailable && current?.phrase && (
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                 <button
                   type='button'
                   className='icon-button'

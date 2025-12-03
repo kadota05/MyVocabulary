@@ -1,14 +1,16 @@
 import { create } from 'zustand'
-import { applyReview, DueCard, getDueCards, Grade, todayYMD } from '~\/db/sqlite'
+import { applyReview, DueCard, getDueCards, Grade, todayYMD } from '~/db/sqlite'
 
 type CardOrder = 'phrase-first' | 'meaning-first'
 
 type State = {
+  geminiApiKey: string
+  setGeminiApiKey: (key: string) => void
   today: string
   remaining: DueCard[]
   again: DueCard[]
   current?: DueCard
-  currentSide?: 'left'|'right'
+  currentSide?: 'left' | 'right'
   flipped: boolean
   loading: boolean
   cardOrder: CardOrder
@@ -23,7 +25,7 @@ const CARD_ORDER_STORAGE_KEY = 'review:cardOrder'
 
 function getInitialCardOrder(): CardOrder {
   if (typeof window === 'undefined') return 'phrase-first'
-  try{
+  try {
     const stored = window.localStorage.getItem(CARD_ORDER_STORAGE_KEY)
     return stored === 'meaning-first' ? 'meaning-first' : 'phrase-first'
   } catch {
@@ -31,16 +33,18 @@ function getInitialCardOrder(): CardOrder {
   }
 }
 
-function persistCardOrder(value: CardOrder){
+function persistCardOrder(value: CardOrder) {
   if (typeof window === 'undefined') return
-  try{
+  try {
     window.localStorage.setItem(CARD_ORDER_STORAGE_KEY, value)
   } catch {
     // Ignore localStorage failures
   }
 }
 
-export const useStore = create<State>((set, get)=> ({
+export const useStore = create<State>((set, get) => ({
+  geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
+  setGeminiApiKey: (key: string) => set({ geminiApiKey: key }),
   today: todayYMD(),
   remaining: [],
   again: [],
@@ -59,7 +63,7 @@ export const useStore = create<State>((set, get)=> ({
     const { next, side, leftOut, rightOut } = pickNext(left, right)
     set({ today, remaining: leftOut, again: rightOut, current: next, currentSide: side, flipped: false, loading: false })
   },
-  flip: () => set(s=> ({ flipped: !s.flipped })),
+  flip: () => set(s => ({ flipped: !s.flipped })),
   setCardOrder: (value: CardOrder) => {
     set({ cardOrder: value, flipped: false })
     persistCardOrder(value)
@@ -76,7 +80,7 @@ export const useStore = create<State>((set, get)=> ({
     // Update pools: current is already removed from pools by selection; modify as per grade
     let left = remaining.slice()
     let right = again.slice()
-    if (g === 'HARD'){
+    if (g === 'HARD') {
       // Move to right pool (if already from right, keep in right by appending to end)
       right.push(current)
     }
@@ -86,14 +90,14 @@ export const useStore = create<State>((set, get)=> ({
   }
 }))
 
-function pickNext(left: DueCard[], right: DueCard[]): { next?: DueCard; side?: 'left'|'right'; leftOut: DueCard[]; rightOut: DueCard[] }{
+function pickNext(left: DueCard[], right: DueCard[]): { next?: DueCard; side?: 'left' | 'right'; leftOut: DueCard[]; rightOut: DueCard[] } {
   const lc = left.length
   const rc = right.length
   const total = lc + rc
   if (total === 0) return { next: undefined, side: undefined, leftOut: left, rightOut: right }
 
   const pickIndex = Math.floor(Math.random() * total)
-  if (pickIndex < lc){
+  if (pickIndex < lc) {
     const idx = pickIndex
     const next = left[idx]
     const leftOut = [...left.slice(0, idx), ...left.slice(idx + 1)]

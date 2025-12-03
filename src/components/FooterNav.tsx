@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react'
+import { Settings, MessageCircle } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const navItems = [
@@ -13,13 +13,18 @@ const navItems = [
     icon: <LeapIcon />
   },
   {
+    to: '/instant-composition',
+    label: '口頭英作文',
+    icon: <MessageCircle size={28} strokeWidth={1.6} aria-hidden='true' />
+  },
+  {
     to: '/settings',
     label: 'Settings',
     icon: <Settings size={28} strokeWidth={1.6} aria-hidden='true' />
   }
 ]
 
-const visibleRoutes = ['/', '/leap', '/settings']
+const visibleRoutes = ['/', '/leap', '/settings', '/instant-composition']
 
 export default function FooterNav() {
   const location = useLocation()
