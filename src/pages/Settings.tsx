@@ -65,11 +65,47 @@ export default function Settings() {
           <button
             className="btn btn-primary"
             onClick={handleSave}
-            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}
+            style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 16 }}
           >
             <Save size={18} />
             {saved ? 'Saved!' : 'Save Settings'}
           </button>
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: 'var(--fg)' }}>Data Management</h3>
+            <button
+              className="btn"
+              onClick={async () => {
+                try {
+                  const { exportFullDB } = await import('../db/sqlite')
+                  const data = await exportFullDB()
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `myvocabulary_backup_${new Date().toISOString().slice(0, 10)}.json`
+                  document.body.appendChild(a)
+                  a.click()
+                  document.body.removeChild(a)
+                  URL.revokeObjectURL(url)
+                } catch (e) {
+                  alert('Export failed: ' + e)
+                }
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 8,
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.5)',
+                color: '#60a5fa'
+              }}
+            >
+              Export Data (JSON)
+            </button>
+          </div>
         </div>
       </div>
     </div>

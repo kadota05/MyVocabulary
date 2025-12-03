@@ -28,9 +28,9 @@ export async function getDB(): Promise<Database> {
   else if (saved instanceof ArrayBuffer) savedBytes = new Uint8Array(saved)
   else if (saved && ArrayBuffer.isView(saved)) savedBytes = new Uint8Array(saved.buffer)
 
-  if (!savedBytes){
+  if (!savedBytes) {
     const backup = readBackup()
-    if (backup){
+    if (backup) {
       savedBytes = backup
       await idbSet(DB_KEY, savedBytes)
     }
@@ -40,7 +40,7 @@ export async function getDB(): Promise<Database> {
     db = new SQL.Database(savedBytes)
   } else {
     db = new SQL.Database()
-    const schema = (await fetch('/db/schema.sql').then(r=>r.text()))
+    const schema = (await fetch('/db/schema.sql').then(r => r.text()))
     db.exec('BEGIN;')
     db.exec(schema)
     db.exec('COMMIT;')
@@ -50,7 +50,7 @@ export async function getDB(): Promise<Database> {
   return db!
 }
 
-export async function persist(){
+export async function persist() {
   if (!db) return
   const data = db.export()
   await idbSet(DB_KEY, data)
@@ -58,8 +58,8 @@ export async function persist(){
 }
 
 export function todayYMD(d = new Date()): string {
-  const z = (n:number)=> String(n).padStart(2,'0')
-  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`
+  const z = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`
 }
 
 export type WordRow = {
@@ -113,7 +113,7 @@ export type CalendarEventInsert = {
   endMinutes: number
 }
 
-function uuid(){
+function uuid() {
   // Simple UUID v4
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> 0
@@ -124,30 +124,30 @@ function uuid(){
 
 export async function importRows(
   rows: ImportRow[],
-  onProgress?: (processed:number, total:number) => void
-): Promise<{added:number; skipped:number; failed:number;}> {
+  onProgress?: (processed: number, total: number) => void
+): Promise<{ added: number; skipped: number; failed: number; }> {
   const d = await getDB()
   const t = todayYMD()
-  let added=0, skipped=0, failed=0
+  let added = 0, skipped = 0, failed = 0
   let processed = 0
-  try{
+  try {
     d.exec('BEGIN;')
-    const norm = (s:string)=> s.trim().toLowerCase()
+    const norm = (s: string) => s.trim().toLowerCase()
     const seen = new Set<string>()
     const existing = new Set<string>()
     const rs = d.exec("SELECT phrase FROM words")[0]
     if (rs) {
-      for (let i=0;i<rs.values.length;i++) existing.add(norm(String(rs.values[i][0])))
+      for (let i = 0; i < rs.values.length; i++) existing.add(norm(String(rs.values[i][0])))
     }
     const total = rows.length
     const yieldEvery = 50
-    for (const r of rows){
-      try{
-        const phrase = (r.phrase||'').trim()
-        const meaning = (r.meaning||'').trim()
-        if (!phrase){ skipped++; continue }
+    for (const r of rows) {
+      try {
+        const phrase = (r.phrase || '').trim()
+        const meaning = (r.meaning || '').trim()
+        if (!phrase) { skipped++; continue }
         const key = norm(phrase)
-        if (seen.has(key) || existing.has(key)){ skipped++; continue }
+        if (seen.has(key) || existing.has(key)) { skipped++; continue }
         seen.add(key)
         const id = uuid()
         const createdAt = r.date ? new Date(r.date).toISOString() : new Date().toISOString()
@@ -155,7 +155,7 @@ export async function importRows(
         const nextDueDate = todayYMD(new Date(createdAt))
         d.run(
           'INSERT INTO words (id, phrase, meaning, example, source, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [id, phrase, meaning ?? '', (r.example||'').trim() || null, (r.source||'').trim() || null, createdAt, updatedAt]
+          [id, phrase, meaning ?? '', (r.example || '').trim() || null, (r.source || '').trim() || null, createdAt, updatedAt]
         )
         d.run(
           'INSERT INTO srs_state (wordId, nextDueDate, intervalDays, stability, reps, lapses, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -173,13 +173,13 @@ export async function importRows(
       }
     }
     d.exec('COMMIT;')
-  } catch(e){
-    try{ d.exec('ROLLBACK;') }catch{}
+  } catch (e) {
+    try { d.exec('ROLLBACK;') } catch { }
     throw e
   } finally {
     await persist()
   }
-  return {added, skipped, failed}
+  return { added, skipped, failed }
 }
 
 export type DueCard = WordRow & SrsRow
@@ -196,7 +196,7 @@ export async function getDueCards(asOfYMD: string): Promise<DueCard[]> {
   `
   const stmt = d.prepare(q, [asOfYMD])
   const out: DueCard[] = []
-  while (stmt.step()){
+  while (stmt.step()) {
     const row = stmt.getAsObject() as any
     out.push({
       id: row.id, phrase: row.phrase, meaning: row.meaning,
@@ -220,9 +220,9 @@ export async function addWord(
   const meaning = (entry.meaning || '').trim()
   const example = (entry.example || '').trim()
   const source = (entry.source || '').trim()
-  const norm = (s:string)=> s.trim().toLowerCase()
+  const norm = (s: string) => s.trim().toLowerCase()
   const existing = d.exec('SELECT phrase FROM words')
-  if (existing[0]){
+  if (existing[0]) {
     const set = new Set<string>()
     for (const row of existing[0].values) set.add(norm(String(row[0])))
     if (set.has(norm(phrase))) throw new Error('DUPLICATE_PHRASE')
@@ -276,18 +276,18 @@ export async function getWordSummary(): Promise<WordSummary> {
   let learned = 0
   let firstCreatedAt: string | null = null
   const today = new Date()
-  today.setHours(0,0,0,0)
+  today.setHours(0, 0, 0, 0)
   const horizon = new Date(today)
   horizon.setDate(horizon.getDate() + 365)
-  while (stmt.step()){
+  while (stmt.step()) {
     const row = stmt.getAsObject() as any
     total += 1
     const created = row.createdAt != null ? String(row.createdAt) : null
-    if (created && (!firstCreatedAt || created < firstCreatedAt)){
+    if (created && (!firstCreatedAt || created < firstCreatedAt)) {
       firstCreatedAt = created
     }
     const nextDue = row.nextDueDate != null ? String(row.nextDueDate) : null
-    if (nextDue && isBeyondHorizon(nextDue, horizon)){
+    if (nextDue && isBeyondHorizon(nextDue, horizon)) {
       learned += 1
     }
   }
@@ -307,13 +307,13 @@ export async function getAllWords(): Promise<WordWithSrs[]> {
   `
   const stmt = d.prepare(q)
   const out: WordWithSrs[] = []
-  while (stmt.step()){
+  while (stmt.step()) {
     const row = stmt.getAsObject() as any
     out.push({
       id: row.id, phrase: row.phrase, meaning: row.meaning, example: row.example, source: row.source,
       createdAt: row.createdAt, updatedAt: row.updatedAt,
-      wordId: row.id, nextDueDate: row.nextDueDate, intervalDays: Number(row.intervalDays||0),
-      stability: Number(row.stability||0), reps: Number(row.reps||0), lapses: Number(row.lapses||0)
+      wordId: row.id, nextDueDate: row.nextDueDate, intervalDays: Number(row.intervalDays || 0),
+      stability: Number(row.stability || 0), reps: Number(row.reps || 0), lapses: Number(row.lapses || 0)
     })
   }
   stmt.free()
@@ -325,13 +325,13 @@ export async function deleteWord(wordId: string): Promise<void> {
   const exists = d.exec('SELECT id FROM words WHERE id = ?', [wordId])
   if (!exists[0] || exists[0].values.length === 0) return
   d.exec('BEGIN;')
-  try{
+  try {
     d.run('DELETE FROM review_log WHERE wordId = ?', [wordId])
     d.run('DELETE FROM srs_state WHERE wordId = ?', [wordId])
     d.run('DELETE FROM words WHERE id = ?', [wordId])
     d.exec('COMMIT;')
-  } catch (error){
-    try{ d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
+  } catch (error) {
+    try { d.exec('ROLLBACK;') } catch { /* ignore rollback failure */ }
     throw error
   }
   await persist()
@@ -361,9 +361,9 @@ export async function updateWord(
     : (patch.source ?? '').toString().trim()
   if (!nextPhrase) throw new Error('VALIDATION_EMPTY_PHRASE')
   // Case-insensitive + trimmed duplicate check excluding self
-  const norm = (s:string)=> s.trim().toLowerCase()
+  const norm = (s: string) => s.trim().toLowerCase()
   const dup = d.exec('SELECT phrase FROM words WHERE id <> ?', [wordId])
-  if (dup[0]){
+  if (dup[0]) {
     const set = new Set<string>()
     for (const v of dup[0].values) set.add(norm(String(v[0])))
     if (set.has(norm(nextPhrase))) throw new Error('DUPLICATE_PHRASE')
@@ -377,14 +377,14 @@ export async function updateWord(
   return { ...current, phrase: nextPhrase, meaning: nextMeaning ?? '', example: nextExample || undefined, source: nextSource || undefined, updatedAt: nowIso }
 }
 
-export type Grade = 'EASY'|'NORMAL'|'HARD'
+export type Grade = 'EASY' | 'NORMAL' | 'HARD'
 
-export function computeIntervalDays(stability: number, targetRetention=0.9): number {
+export function computeIntervalDays(stability: number, targetRetention = 0.9): number {
   const I = Math.round(-stability * Math.log(targetRetention))
   return Math.max(1, I)
 }
 
-export async function applyReview(wordId: string, grade: Grade, today: string): Promise<{newInterval:number; newDue:string;}> {
+export async function applyReview(wordId: string, grade: Grade, today: string): Promise<{ newInterval: number; newDue: string; }> {
   const d = await getDB()
   const nowIso = new Date().toISOString()
   const rs = d.exec('SELECT stability, reps, lapses FROM srs_state WHERE wordId = ?', [wordId])
@@ -402,7 +402,7 @@ export async function applyReview(wordId: string, grade: Grade, today: string): 
   d.exec('BEGIN;')
   d.run('UPDATE srs_state SET stability=?, intervalDays=?, nextDueDate=?, reps=?, lapses=?, updatedAt=? WHERE wordId=?',
     [stability, intervalDays, nextDue, reps, lapses, nowIso, wordId])
-  d.run('UPDATE words SET updatedAt=? WHERE id=?',[nowIso, wordId])
+  d.run('UPDATE words SET updatedAt=? WHERE id=?', [nowIso, wordId])
   d.run('INSERT INTO review_log (id, wordId, reviewedAt, grade, newInterval, newDueDate) VALUES (?, ?, ?, ?, ?, ?)',
     [uuid(), wordId, nowIso, grade, intervalDays, nextDue])
   d.exec('COMMIT;')
@@ -410,27 +410,27 @@ export async function applyReview(wordId: string, grade: Grade, today: string): 
   return { newInterval: intervalDays, newDue: nextDue }
 }
 
-function addDays(ymd:string, days:number){
-  const [y,m,d] = ymd.split('-').map(Number)
-  const dt = new Date(Date.UTC(y, m-1, d))
-  dt.setUTCDate(dt.getUTCDate()+days)
+function addDays(ymd: string, days: number) {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() + days)
   return todayYMD(new Date(dt))
 }
 
-function isBeyondHorizon(nextDue: string, horizon: Date){
+function isBeyondHorizon(nextDue: string, horizon: Date) {
   const dt = parseYMD(nextDue)
   if (!dt) return false
   return dt.getTime() >= horizon.getTime()
 }
 
-function parseYMD(ymd: string){
+function parseYMD(ymd: string) {
   if (!ymd) return null
   const parts = ymd.split('-').map(Number)
   if (parts.length !== 3 || parts.some(n => Number.isNaN(n))) return null
-  const [y,m,d] = parts
-  const dt = new Date(y, m-1, d)
+  const [y, m, d] = parts
+  const dt = new Date(y, m - 1, d)
   if (Number.isNaN(dt.getTime())) return null
-  dt.setHours(0,0,0,0)
+  dt.setHours(0, 0, 0, 0)
   return dt
 }
 
@@ -438,7 +438,7 @@ const CALENDAR_EVENT_COLORS: readonly CalendarEventColor[] = ['white', 'green', 
 const CALENDAR_EVENT_COLOR_SET = new Set<CalendarEventColor>(CALENDAR_EVENT_COLORS)
 const MINUTES_PER_DAY = 24 * 60
 
-function ensureCalendarSchema(database: Database | null){
+function ensureCalendarSchema(database: Database | null) {
   if (!database) return
   database.exec(`
     CREATE TABLE IF NOT EXISTS calendar_events (
@@ -468,13 +468,13 @@ function ensureCalendarSchema(database: Database | null){
   `)
 }
 
-function normalizeCalendarColor(color: string | null | undefined): CalendarEventColor{
+function normalizeCalendarColor(color: string | null | undefined): CalendarEventColor {
   if (!color) return 'white'
   const lower = String(color).toLowerCase() as CalendarEventColor
   return CALENDAR_EVENT_COLOR_SET.has(lower) ? lower : 'white'
 }
 
-function normalizeCalendarRange(startMinutes: number, endMinutes: number){
+function normalizeCalendarRange(startMinutes: number, endMinutes: number) {
   const safeStart = Math.max(0, Math.min(Math.round(startMinutes), MINUTES_PER_DAY - 1))
   const safeEndRaw = Math.max(safeStart + 1, Math.round(endMinutes))
   const safeEnd = Math.min(safeEndRaw, MINUTES_PER_DAY)
@@ -504,7 +504,7 @@ export async function getCalendarEvents(): Promise<CalendarEventRow[]> {
   )
   const events: CalendarEventRow[] = []
   try {
-    while (stmt.step()){
+    while (stmt.step()) {
       const row = stmt.getAsObject()
       events.push(mapCalendarRow(row as Record<string, unknown>))
     }
@@ -706,44 +706,91 @@ export async function deleteCalendarTemplate(id: string): Promise<void> {
   await persist()
 }
 
-function writeBackup(bytes: Uint8Array){
+function writeBackup(bytes: Uint8Array) {
   if (typeof window === 'undefined' || !window.localStorage) return
-  try{
+  try {
     const base64 = bufferToBase64(bytes)
     window.localStorage.setItem(DB_BACKUP_KEY, base64)
-  } catch (error){
+  } catch (error) {
     console.warn('Failed to store backup', error)
   }
 }
 
 function readBackup(): Uint8Array | null {
   if (typeof window === 'undefined' || !window.localStorage) return null
-  try{
+  try {
     const base64 = window.localStorage.getItem(DB_BACKUP_KEY)
     if (!base64) return null
     return base64ToBuffer(base64)
-  } catch (error){
+  } catch (error) {
     console.warn('Failed to read backup', error)
     return null
   }
 }
 
-function bufferToBase64(bytes: Uint8Array){
+function bufferToBase64(bytes: Uint8Array) {
   let binary = ''
   const chunk = 0x8000
-  for (let i = 0; i < bytes.length; i += chunk){
+  for (let i = 0; i < bytes.length; i += chunk) {
     const sub = bytes.subarray(i, i + chunk)
     binary += String.fromCharCode(...sub)
   }
   return btoa(binary)
 }
 
-function base64ToBuffer(base64: string){
+function base64ToBuffer(base64: string) {
   const binary = atob(base64)
   const len = binary.length
   const bytes = new Uint8Array(len)
-  for (let i = 0; i < len; i++){
+  for (let i = 0; i < len; i++) {
     bytes[i] = binary.charCodeAt(i)
   }
   return bytes
+}
+
+export type MigrationData = {
+  words: WordRow[]
+  srs_state: SrsRow[]
+  review_log: any[]
+  calendar_events: CalendarEventRow[]
+  calendar_templates: CalendarTemplateRow[]
+}
+
+export async function exportFullDB(): Promise<MigrationData> {
+  const d = await getDB()
+
+  const words = []
+  const r1 = d.exec("SELECT * FROM words")
+  if (r1[0]) {
+    for (const v of r1[0].values) {
+      words.push({
+        id: v[0], phrase: v[1], meaning: v[2], example: v[3], source: v[4], createdAt: v[5], updatedAt: v[6]
+      } as WordRow)
+    }
+  }
+
+  const srs_state = []
+  const r2 = d.exec("SELECT * FROM srs_state")
+  if (r2[0]) {
+    for (const v of r2[0].values) {
+      srs_state.push({
+        wordId: v[0], nextDueDate: v[1], intervalDays: v[2], stability: v[3], reps: v[4], lapses: v[5], updatedAt: v[6]
+      } as SrsRow)
+    }
+  }
+
+  const review_log = []
+  const r3 = d.exec("SELECT * FROM review_log")
+  if (r3[0]) {
+    for (const v of r3[0].values) {
+      review_log.push({
+        id: v[0], wordId: v[1], reviewedAt: v[2], grade: v[3], newInterval: v[4], newDueDate: v[5]
+      })
+    }
+  }
+
+  const calendar_events = await getCalendarEvents()
+  const calendar_templates = await getCalendarTemplates()
+
+  return { words, srs_state, review_log, calendar_events, calendar_templates }
 }
